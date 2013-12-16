@@ -10,7 +10,7 @@ function loadConfiguration(configFile) {
 				it hasn't renewed the IP address, but in fact is in power saving mode
 	*/
 
-	alertDevices = [["My Phone","xx:xx:xx:xx:xxx:xx", "http","http://192.168.1.100:8176/variables/myCell_onNetwork", 5],
+	alertDevices = [["My Phone","xx:xx:xx:xx:xxx:xx", "http","http://192.168.1.100:8176/variables/myCell_onNetwork", 5]
 	];
 
 	/*
