@@ -1,5 +1,9 @@
+Fing Device Watch
+---
+A node.js implementation of a Fing wrapper that can notify via HTTP when a device on your network changes. Useful for Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.
 
-Requirements:
+Requirements & Installation
+---
 
 	1. Fing (http://www.overlooksoft.com/fing)
 
@@ -9,10 +13,20 @@ Requirements:
 
 Note: this works great on a Raspberry Pi using these instructions to install Node.js : http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
 
-Configuration:
+Configuration
+---
 
-	1. Edit devicewatch.js and modify the Array in the loadConfiguration() function.  Use the comments to understand the fields.  Make sure to modify fingCommand_netmask to match your network IPs.
+1. Create a copy of devicewatch.conf.sample and name it devicewatch.conf
 
-	2. Set the script to load on bootup.  This can be done with a simple init.d script for Linux.  I have not done this yet for Mac OS X.
+2. Modify the new configuration file based on the instructions in the comments
 
-	3. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable Debugging via the code.
+3. Set the script to load on bootup.  This can be done with a simple init.d script for Linux.  I have not done this yet for Mac OS X.
+
+4. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable Debugging via the code.
+
+
+Change Log
+---
+
+2013-12-21: Added a configuration file, no need to edit the code to set your alert devices any longer.
+				Added support for password protected Indigo servers, set your password in the configuration file

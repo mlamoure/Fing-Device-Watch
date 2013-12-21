@@ -1,34 +1,52 @@
-function loadConfiguration(configFile) {
-	/*
-		Define this array with the list of devices you would like to announce when the status changes to Indigo.
+function loadConfiguration(callback) {
+	var fs = require('fs');
+	var csv = require('csv');
 
-		[0]: Friendly name of the device
-		[1]: Mac address of the device
-		[2]: Mode (http is currently only mode supported)
-		[3]: Fully qualified domain name of your Indigo variable that you want to update (e.g. http://192.168.1.100:8176/variables/variable_name)
-		[4]: TTL on the network before reporting "off".  This helps reduce errors when a mobile device is reported "off" the network because 
-				it hasn't renewed the IP address, but in fact is in power saving mode
-	*/
-
-	alertDevices = [["My Phone","xx:xx:xx:xx:xxx:xx", "http","http://192.168.1.100:8176/variables/myCell_onNetwork", 5]
-	];
-
-	/*
-		This is a list of whitelisted network devies.  As an extra piece of functionality, I had this device watcher provide notifications to
-		you when a unknown device is on your network.  I have not yet implemented the "alert" functionality, though I plan to have the server
-		simply send an email.
-	*/
-
-	whiteListDevices = [
-		["My Laptop", "xx:xx:xx:xx:xx:xx"]
-	];
-
-	/*
-		Place your network address range here.  This is important, if it's not correct, fing will not know what to monitor.
-	*/
-
-	fingCommand_netmask = "192.168.1.1/24";
-//	fingCommand_netmask = "10.66.0.1/24";
+	csv()
+	.from.path(__dirname+'/devicewatch.conf', { delimiter: ',', comment: '#', ltrim: 'true', rtrim: 'true' })
+	.to.array( function(data, count) {
+		for (var i = 0; i < count; i++)
+		{
+			if (data[i][0] == "AlertDevice")
+			{
+				alertDevices[alertDevices.length] = [data[i][1], data[i][2], data[i][3], data[i][4], data[i][5]];
+				whiteListDevices[whiteListDevices.length] = [data[i][1], data[i][2]];
+			}
+			else if (data[i][0] == "WhiteListDevice")
+			{
+				whiteListDevices[whiteListDevices.length] = [data[i][1], data[i][2]];
+			}
+			else if (data[i][0] == "Netmask")
+			{
+				fingCommand_netmask = data[i][1];
+				if (debug) console.log ("Configuration: Netmask is being set to " + fingCommand_netmask);
+			}
+			else if (data[i][0] == "Indigo_Password_Protect")
+			{
+				if (data[i][1] == "true") indigo_Password_Protect = true;
+				else indigo_Password_Protect = false;
+			}
+			else if (data[i][0] == "Indigo_UserName")
+			{
+				indigo_UserName = data[i][1];
+			}
+			else if (data[i][0] == "Indigo_Password")
+			{
+				indigo_Password = data[i][1];
+			}
+			else if (data[i][0] == "Debug")
+			{
+				if (data[i][1] == "true") debug = true;
+				else debug = false;
+			}
+		}
+	})
+	.on('end', function(count){
+  		callback();
+	})
+	.on('error', function(error){
+	  console.log("Something is wrong with your config file: " + error.message);
+	});
 }
 
 /* ############################################################################################################################## */
@@ -40,19 +58,24 @@ var util  = require('util'),
 	csv = require('csv'),
 	file = 'devices.csv',
 	networkDevices = new Array,
-	whiteListDevices,
-	alertDevices,
+	whiteListDevices = new Array,
+	alertDevices = new Array,
 	moment = require('moment'),
 	fingCommand_netmask,
 	dateformat = "YYYY/MM/DD HH:mm:ss",
 	fingCommand,
 	debug = false,
+	indigo_Password_Protect = false,
+	indigo_Password,
+	indigo_UserName,
 	scan_interval = 1 * 60 * 1000;
 
 
 /* THIS IS THE START OF THE APP */
-loadConfiguration();
-runFing();
+loadConfiguration(function()
+	{
+		runFing();
+	});
 
 setInterval(function() {
 	processDevices();
@@ -307,8 +330,15 @@ function alertDevice(deviceIndex) {
 	networkDevices[deviceIndex][7] = true;
 
 	console.log("** (" + getCurrentTime() + ") ALERT ** Alert being sent for device - " + alertDevices[alertIndex][0] + ": State is " + setValue);
-	exec("curl -X PUT -d value=" + setValue + " " + alertDevices[alertIndex][3] + "> /dev/null 2>&1", function(error, stdout, stderr){});	
 
+	if (indigo_Password_Protect)
+	{
+		exec("curl --user " + indigo_UserName + ":" + Indigo_Password + " --digest -X PUT -d value=" + setValue + " " + alertDevices[alertIndex][3] + "> /dev/null 2>&1", function(error, stdout, stderr){});	
+	}
+	else
+	{
+		exec("curl -X PUT -d value=" + setValue + " " + alertDevices[alertIndex][3] + "> /dev/null 2>&1", function(error, stdout, stderr){});	
+	}
 }
 
 function isWhiteListedDevice(deviceIndex)
