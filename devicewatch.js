@@ -39,6 +39,10 @@ function loadConfiguration(callback) {
 				if (data[i][1] == "true") debug = true;
 				else debug = false;
 			}
+//			else if (data[i][0] == "AdminPassword")
+//			{
+//				admin_Password = data[i][1];
+//			}
 		}
 	})
 	.on('end', function(count){
@@ -68,6 +72,7 @@ var util  = require('util'),
 	indigo_Password_Protect = false,
 	indigo_Password,
 	indigo_UserName,
+//	admin_Password,
 	scan_interval = 1 * 60 * 1000;
 
 
@@ -94,6 +99,7 @@ function runFing(fingCommand)
 	//		[5]: Mac Address
 	//		[6]: Manufacturer
 	//		[7]: Common Known Name
+
 
 	fingCommand = spawn('sudo',['fing', '-n', fingCommand_netmask, '-o', 'log,csv,console']);
 

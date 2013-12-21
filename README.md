@@ -24,6 +24,9 @@ Configuration
 
 4. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable Debugging via the code.
 
+5. Run the devicewatch script: node devicewatch.js
+	OS X Users: in order to automate the entering of your admin password (required for Fing), use the following way of launching the devicewatch.js script:
+		echo {Admin Password} | sudo -S node devicewatch.js
 
 Change Log
 ---
