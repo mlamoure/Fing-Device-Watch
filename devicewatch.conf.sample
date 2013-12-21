@@ -16,9 +16,10 @@ AlertDevice, My Phone, xx:xx:xx:xx:xx:xx, indigo/http, http://192.168.1.100:8176
 #
 # Each white listed device goes on its own line, with two attributes, seperated by a comma
 #	Example: WhiteListDevice, Device Friendly Name, Mac Addres
+# 	NOTE: Any Alert Device is automatically added to the white list
 
 WhiteListDevice, My Macbook Pro, xx:xx:xx:xx:xx:xx
-WhiteListDevice, Mike's iPhone, 68:96:7B:69:42:62
+WhiteListDevice, Mike's iPhone, xx:xx:xx:xx:xx:xx
 
 # This is a critical configuration item, the Fing Netmask of the network you want to monitor.
 # 	Example: Netmask, 192.168.1.1/24
