@@ -1,6 +1,6 @@
 Fing Device Watch
 ---
-A node.js implementation of a Fing wrapper that can notify via HTTP when a device on your network changes. Useful for Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.
+A node.js implementation of a Fing wrapper that can notify via HTTP (more methods to be added in the future) when a device on your network changes. Useful for Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.
 
 Requirements & Installation
 ---
