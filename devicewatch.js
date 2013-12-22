@@ -1,3 +1,46 @@
+var util  = require('util'),
+    spawn = require('child_process').spawn,
+    exec = require('child_process').exec,
+	fs = require('fs'),
+	csv = require('csv'),
+	needle = require('needle'),
+	networkDevices = new Array,
+	whiteListDevices = new Array,
+	alertDevices = new Array,
+	moment = require('moment'),
+	fingCommand_netmask,
+	dateformat = "YYYY/MM/DD HH:mm:ss",
+	fingCommand,
+	debug = false,
+	indigo_Password_Protect = false,
+	indigo_Password,
+	indigo_UserName,
+	scan_interval = 1 * 60 * 1000;
+
+
+/* THIS IS THE START OF THE APP */
+loadConfiguration(function() {
+	runFing();
+});
+
+setInterval(function() {
+	processDevices();
+}, scan_interval);
+
+setInterval(function() {
+	refreshAlertDeviceIndigoStatus();
+}, scan_interval);
+
+function refreshAlertDeviceIndigoStatus() {
+	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
+	{
+		if (isAlertDevice(deviceCounter))
+		{
+			updateIndigoState(deviceCounter, getAlertIndex(deviceCounter));
+		}
+	}
+}
+
 function loadConfiguration(callback) {
 	var fs = require('fs');
 	var csv = require('csv');
@@ -39,10 +82,6 @@ function loadConfiguration(callback) {
 				if (data[i][1] == "true") debug = true;
 				else debug = false;
 			}
-//			else if (data[i][0] == "AdminPassword")
-//			{
-//				admin_Password = data[i][1];
-//			}
 		}
 	})
 	.on('end', function(count){
@@ -52,39 +91,6 @@ function loadConfiguration(callback) {
 	  console.log("Something is wrong with your config file: " + error.message);
 	});
 }
-
-/* ############################################################################################################################## */
-
-var util  = require('util'),
-    spawn = require('child_process').spawn,
-    exec = require('child_process').exec,
-	fs = require('fs'),
-	csv = require('csv'),
-	file = 'devices.csv',
-	networkDevices = new Array,
-	whiteListDevices = new Array,
-	alertDevices = new Array,
-	moment = require('moment'),
-	fingCommand_netmask,
-	dateformat = "YYYY/MM/DD HH:mm:ss",
-	fingCommand,
-	debug = false,
-	indigo_Password_Protect = false,
-	indigo_Password,
-	indigo_UserName,
-//	admin_Password,
-	scan_interval = 1 * 60 * 1000;
-
-
-/* THIS IS THE START OF THE APP */
-loadConfiguration(function()
-	{
-		runFing();
-	});
-
-setInterval(function() {
-	processDevices();
-}, scan_interval);
 
 function runFing(fingCommand)
 {
@@ -141,89 +147,86 @@ function parseDevice(data) {
 		var timestamp = device[0][0];
 		var fqdn = device[0][4];
 
-		updateDevice(mac, state, ip_address, manufacturer, timestamp, fqdn);
+		updateDevice(mac, state == "up", ip_address, manufacturer, timestamp, fqdn);
 	});
 }
 
-function updateDevice(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
+function getDeviceIndex(mac)
 {
-	var recordNumber = -1;
-	var whiteListIndex = -1;
-	var alertIndex = -1;
-
-	var whiteListDeviceFlag = false;
-	var alertDeviceFlag = false;
-	var alertExpiration = getCurrentTime();
-	var previouslyAnnounced = false;  // NOTE: Seems will always be false.
-
-	var immediateAlert = false;
-
-	var newRecord = false;
-
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
 	{
 		if (networkDevices[deviceCounter][0] == mac)
 		{
-			if (debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE -- **************");
-
-			recordNumber = deviceCounter;
-			newRecord = false;
-
-			whiteListDeviceFlag = networkDevices[deviceCounter][3];
-			alertDeviceFlag = networkDevices[deviceCounter][4];
-
-			if (alertDeviceFlag && state == "down" && state != getDeviceState(recordNumber))
-			{
-				// set the "previously announced" flag to false, because the state has changed
-				previouslyAnnounced = false;
-
-				alertIndex = getAlertIndex(deviceCounter);
-
-				alertExpiration = getNewAlertTimeoutExpriation(alertIndex);
-			}
-			else if (alertDeviceFlag && state == "up")
-			{
-				previouslyAnnounced = true;
-				immediateAlert = true;
-			}
+			return deviceCounter;
 		}
 	}
 
-	if (recordNumber == -1)
+	return -1;
+}
+
+function updateDevice(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
+{
+	var whiteListIndex = -1;
+	var alertIndex = -1;
+	var whiteListDeviceFlag = false;
+	var alertDeviceFlag = false;
+	var alertExpiration = getCurrentTime();
+	var indigoValue;
+	var newRecord = false;
+	var deviceIndex = getDeviceIndex(mac);
+	var previouslyReported = false;
+
+	if (deviceIndex > -1)
+	{
+		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE -- **************");
+
+		newRecord = false;
+
+		whiteListDeviceFlag = isWhiteListedDevice(deviceIndex);
+		alertDeviceFlag = isAlertDevice(deviceIndex);
+		indigoValue = getIndigoState(deviceIndex);
+		previouslyReported = wasPreviouslyReported(deviceIndex);
+
+		// if the new state is false and it is a alert device, set the alert Expiration
+		if (alertDeviceFlag && !state)
+		{
+			alertIndex = getAlertIndex(deviceIndex);
+			alertExpiration = getNewAlertTimeoutExpriation(deviceIndex);
+		}		
+	}
+
+	if (deviceIndex == -1)
 	{
 		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- NEW DEVICE -- **************");
 
 		newRecord = true;
-		recordNumber = networkDevices.length;
+		deviceIndex = networkDevices.length;
 	}
 
-	networkDevices[recordNumber] = [mac, state, ip_address, whiteListDeviceFlag, alertDeviceFlag, manufacturer, fingTimestamp, previouslyAnnounced, alertExpiration, false, fqdn];
+	networkDevices[deviceIndex] = [mac, state, ip_address, whiteListDeviceFlag, alertDeviceFlag, manufacturer, fingTimestamp, alertExpiration, previouslyReported, fqdn, indigoValue];
 	
 	// For new devices, we need to check if the device is an "Alert Device", only for new devices
 	if (newRecord)
 	{
-		alertIndex = getAlertIndex(recordNumber);
-		whiteListIndex = getWhiteListIndex(recordNumber);
+		alertIndex = getAlertIndex(deviceIndex);
+		whiteListIndex = getWhiteListIndex(deviceIndex);
 
 		if (alertIndex >= 0)
 		{
 			alertDeviceFlag = true;
-			networkDevices[recordNumber][4] = alertDeviceFlag;
-			previouslyAnnounced = true; // Doesn't really matter, but setting this to be consistant
-
-			immediateAlert = true;
+			networkDevices[deviceIndex][4] = alertDeviceFlag;
 		}
 
 		if (whiteListIndex >= 0)
 		{
 			whiteListDeviceFlag = true;
-			networkDevices[recordNumber][3] = whiteListDeviceFlag;
+			networkDevices[deviceIndex][3] = whiteListDeviceFlag;
 		}
 	}
 
-	if (immediateAlert) alertDevice(recordNumber);
+	if (isReadyforAlert(deviceIndex)) alertDevice(deviceIndex);
 
-	logToConsole(recordNumber);
+	logToConsole(deviceIndex);
 }
 
 function logToConsole(deviceIndex)
@@ -244,12 +247,12 @@ function logToConsole(deviceIndex)
 		console.log("\t\tWhite List Flag: " + isWhiteListedDevice(deviceIndex)+ " (index: " + whiteListIndex + ")");
 		console.log("\t\tAlert Device Flag: " + isAlertDevice(deviceIndex) + " (index: " + alertIndex + ")");
 
-		if (isAlertDevice(deviceIndex)) console.log("\t\tAlert Device: " + alertDevices[alertIndex][0]);
-		if (isWhiteListedDevice(deviceIndex)) console.log("\t\tWhite List Device: " + whiteListDevices[whiteListIndex][0]);
+		if (isAlertDevice(deviceIndex)) console.log("\t\tAlert Device Name: " + alertDevices[alertIndex][0]);
+		if (isWhiteListedDevice(deviceIndex)) console.log("\t\tWhite List Device Name: " + whiteListDevices[whiteListIndex][0]);
 
 		console.log("\t\tFing last update timestamp: " + getFingTimestamp(deviceIndex));
 		console.log("\t\t\"Off network\" Expiration Time: " + getExpirationTime(deviceIndex));
-		console.log("\t\tPreviously Announced: " + wasPreviouslyAnnouced(deviceIndex));
+		console.log("\t\tCached Indigo Value: " + getIndigoState(deviceIndex));
 		console.log ("\t*****************************************************************\n");	
 	}
 }
@@ -287,11 +290,6 @@ function getAlertIndex(deviceIndex) {
 	return -1;
 }
 
-function getDeviceState(deviceIndex)
-{
-	return networkDevices[deviceIndex][1];
-}
-
 function isReadyforAlert(deviceIndex) {
 	var alertIndex = getAlertIndex(deviceIndex);
 
@@ -299,10 +297,17 @@ function isReadyforAlert(deviceIndex) {
 	if (!isAlertDevice(deviceIndex)) {
 		return false;
 	}
-	else if (wasPreviouslyAnnouced(deviceIndex))
+	
+	console.log("** (" + getCurrentTime() + ") Cached Indigo value of " + alertDevices[alertIndex][0] + " is: " + getIndigoState(deviceIndex) + ", current state from fing is " + getDeviceState(deviceIndex));
+
+	if (!getIndigoState(deviceIndex) && getDeviceState(deviceIndex))
 	{
-		console.log("** (" + getCurrentTime() + ") Not going to send an alert for device " + alertDevices[alertIndex][0] + " because it was already announced");
-		return false;
+		return true;
+	}
+	else if (getDeviceState(deviceIndex) == getIndigoState(deviceIndex))
+	{
+		console.log("** (" + getCurrentTime() + ") Not going to send an alert for device " + alertDevices[alertIndex][0] + " because Indigo is already set appropriately");
+		return false;		
 	}
 	else if (getCurrentTime() < getExpirationTime(deviceIndex)) {
 		console.log("** (" + getCurrentTime() + ") Not going to send an alert for device " + alertDevices[alertIndex][0] + " because the expiration time has not passed (" + getExpirationTime(deviceIndex) + ")");
@@ -323,28 +328,77 @@ function alertDevice(deviceIndex) {
 	if (alertIndex == -1) return;
 	var setValue;
 
-	if (getDeviceState(deviceIndex) == "up")
+	if (getDeviceState(deviceIndex))
 	{
-		setValue = "true"
+		setValue = "value=true"
 	}
-	else if (getDeviceState(deviceIndex) == "down")
+	else
 	{
-		setValue = "false"
+		setValue = "value=false"
 	}
-
-	// set the "Announced device" flag to true (for the current state)
-	networkDevices[deviceIndex][7] = true;
 
 	console.log("** (" + getCurrentTime() + ") ALERT ** Alert being sent for device - " + alertDevices[alertIndex][0] + ": State is " + setValue);
 
 	if (indigo_Password_Protect)
 	{
-		exec("curl --user " + indigo_UserName + ":" + Indigo_Password + " --digest -X PUT -d value=" + setValue + " " + alertDevices[alertIndex][3] + "> /dev/null 2>&1", function(error, stdout, stderr){});	
+		needle.put(getAlertDeviceURL(alertIndex), setValue, { username: indigo_UserName, password: indigo_Password, auth: 'digest' }, function() {
+			//
+		})
 	}
 	else
 	{
-		exec("curl -X PUT -d value=" + setValue + " " + alertDevices[alertIndex][3] + "> /dev/null 2>&1", function(error, stdout, stderr){});	
+		needle.put(getAlertDeviceURL(alertIndex), setValue, function() {
+			//
+		})
 	}
+}
+
+function getDeviceState(deviceIndex)
+{
+	if (typeof(networkDevices[deviceIndex][1]) == "boolean") return (networkDevices[deviceIndex][1]);
+
+	switch (networkDevices[deviceIndex][1].toUpperCase())
+	{
+		case "UP":
+			return (true);
+		case "TRUE":
+			return (true);
+		case "DOWN":
+			return (false);
+		case "FALSE":
+			return (false);
+	}
+
+	return false;
+}
+
+function updateIndigoState(deviceIndex, alertIndex)
+{
+	var indigoValue = false;
+
+	needle.get(getAlertDeviceURL(alertIndex) + ".txt", function(err, resp, body) {
+		csv()
+		.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
+		.to.array( function(data, count) {
+			if (debug) console.log(data);
+			indigoValue = data[5][1] == "true";
+			
+			logToConsole(deviceIndex);
+
+			console.log("** (" + getCurrentTime() + ") Obtained and saved the current value of indigo variable " + alertDevices[alertIndex][0] + " is: " + indigoValue);
+			networkDevices[deviceIndex][10] = indigoValue;
+		});
+	});				
+}
+
+function getIndigoState(deviceIndex)
+{
+	return (networkDevices[deviceIndex][10]);
+}
+
+function getAlertDeviceURL(alertIndex)
+{
+	return (alertDevices[alertIndex][3]);
 }
 
 function isWhiteListedDevice(deviceIndex)
@@ -378,7 +432,7 @@ function getWhiteListIndex(deviceIndex) {
 function reportUnknownDevice(deviceIndex) {
 	console.log("** (" + getCurrentTime() + ") ALERT ** Found a device that is not cleared to be on the network: " + networkDevices[deviceIndex][0] + ", " + networkDevices[deviceIndex][2]);
 
-	networkDevices[deviceIndex][9] = true;
+	networkDevices[deviceIndex][8] = true;
 }
 
 function getMacAddress(deviceIndex) {
@@ -394,15 +448,11 @@ function getFingTimestamp(deviceIndex) {
 }
 
 function getExpirationTime(deviceIndex) {
-	return (networkDevices[deviceIndex][8]);
-}
-
-function wasPreviouslyAnnouced(deviceIndex) {
 	return (networkDevices[deviceIndex][7]);
 }
 
 function getFQDN(deviceIndex) {
-	return (networkDevices[deviceIndex][10]);
+	return (networkDevices[deviceIndex][9]);
 }
 
 
@@ -415,10 +465,10 @@ function processDevices() {
 		[4] = Alert Device (true or false)
 		[5] = Manufacturer
 		[6] = Fing Timestamp
-		[7] = Previously Announced
-		[8] = Timeout expiration for declaring "off" network
-		[9] = Previously Reported (for non-whitelisted devices)
-		[10] = Fully qualified domain name
+		[7] = Timeout expiration for declaring "off" network
+		[8] = Previously Reported (for non-whitelisted devices)
+		[9] = Fully qualified domain name
+		[10] = Indigo State
 	*/
 	
 	if (debug)

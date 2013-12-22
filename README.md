@@ -9,7 +9,8 @@ Requirements & Installation
 
 	2. Node.js (http://nodejs.org)
 
-	3. NPM Packages: csv (https://github.com/wdavidw/node-csv, npm install csv) and moment (https://npmjs.org/package/moment, npm install --save moment)
+	3. NPM Packages: csv: npm install csv
+						moment: npm install --save moment
 
 Note: this works great on a Raspberry Pi using these instructions to install Node.js : http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
 
@@ -34,4 +35,5 @@ Change Log
 ---
 
 2013-12-21: Added a configuration file, no need to edit the code to set your alert devices any longer.
+				
 				Added support for password protected Indigo servers, set your password in the configuration file
