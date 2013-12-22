@@ -97,7 +97,9 @@ function loadConfiguration(callback) {
 			else if (data[i][0] == "Netmask")
 			{
 				fingCommand_netmask = data[i][1];
-				if (debug) console.log ("Configuration: Netmask is being set to " + fingCommand_netmask);
+
+				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
 			}
 			else if (data[i][0] == "Indigo_Password_Protect")
 			{
