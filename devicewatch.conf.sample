@@ -16,10 +16,10 @@ AlertDevice, My Phone, xx:xx:xx:xx:xx:xx, indigo/http, http://192.168.1.100:8176
 #
 # Each white listed device goes on its own line, with two attributes, seperated by a comma
 #	Example: WhiteListDevice, Device Friendly Name, Mac Addres
-# 	NOTE: Any Alert Device is automatically added to the white list
+# 	NOTE: Any Alert Device is automatically added to the white list, so no need to add it again.
 
 WhiteListDevice, My Macbook Pro, xx:xx:xx:xx:xx:xx
-WhiteListDevice, Mike's iPhone, xx:xx:xx:xx:xx:xx
+WhiteListDevice, My Desktop, xx:xx:xx:xx:xx:xx
 
 # This is a critical configuration item, the Fing Netmask of the network you want to monitor.
 # 	Example: Netmask, 192.168.1.1/24
@@ -33,3 +33,11 @@ Indigo_Password, none
 
 # Debugging to the console.  Only do this if you are prepared for a lot of verbose output
 Debug, false
+
+# How frequently devicescan.js will refresh the current status of Indigo variables, so that devicescan.js will not update when the value is already set appropriately.
+Indigo_Scan_Interval, 5
+
+# Many actions that devicescan.js performs is event based, however it will also occasionally scan scan through all the devices that Fing has reported, 
+# and check if anything needs to be done (alert for a device that has expired on the network, refresh status, etc.).
+# Recommended value is beween 1 and 3.  Value is in minutes.
+Device_Scan_Interval, 1
