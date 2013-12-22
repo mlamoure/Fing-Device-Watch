@@ -24,6 +24,7 @@ Configuration
 2. Modify the new configuration file based on the instructions in the comments
 
 3. Run manually via: node devicewatch.js
+	
 	Alternatively: Set the script to load on bootup.  This can be done with a simple init.d script for Linux.  I have not done this yet for Mac OS X.
 
 	OS X Users: in order to automate the entering of your admin password (required for Fing), use the following way of launching the devicewatch.js script:
