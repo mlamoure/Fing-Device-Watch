@@ -9,8 +9,10 @@ Requirements & Installation
 
 	2. Node.js (http://nodejs.org)
 
-	3. NPM Packages: csv: npm install csv
+	3. NPM Packages: 
+						csv: npm install csv
 						moment: npm install --save moment
+						needle: npm install needle
 
 Note: this works great on a Raspberry Pi using these instructions to install Node.js : http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
 
