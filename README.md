@@ -19,11 +19,19 @@ Note: this works great on a Raspberry Pi using these instructions to install Nod
 Configuration
 ---
 
-1. Create a copy of devicewatch.conf.sample and name it devicewatch.conf.  Keep it in the same directory as devicewatch.js.
+1. If using this with Perceptive Automation's Indigo, create Indigo variables for each of the devices you would like to track.
+	The variables can be named however you wish, keep the naming memorable, and keep track of them as you will need the information in the next few steps.
 
-2. Modify the new configuration file based on the instructions in the comments
+2. Write down the mac addresses for each of the devices you have created variables for, you will need this as you configure devicewatch.js in the next step.
+	Many people use mobile phones as alert devices.  The mac address for your mobile phone can be found in your settings.
 
-3. Run manually via: node devicewatch.js
+	For iOS, there is a tutorial here: http://oit2.utk.edu/helpdesk/kb/entry/2099/
+
+3. Create a copy of devicewatch.conf.sample and name it devicewatch.conf.  Keep it in the same directory as devicewatch.js.
+
+4. Modify the new configuration file based on the instructions in the comments.
+
+5. Run manually via: node devicewatch.js
 	
 	Alternatively: Set the script to load on bootup.  This can be done with a simple init.d script for Linux.  I have not done this yet for Mac OS X.
 
@@ -31,7 +39,7 @@ Configuration
 		
 		echo {Admin Password} | sudo -S node devicewatch.js
 
-4. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable debugging via the configuration file.
+6. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable debugging via the configuration file.
 
 Change Log
 ---

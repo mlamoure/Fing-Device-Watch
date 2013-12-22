@@ -63,16 +63,18 @@ loadConfiguration(function() {
 
 });
 
-function refreshAlertDeviceIndigoStatus() {
-	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
-	{
-		if (isAlertDevice(deviceCounter))
-		{
-			updateIndigoState(deviceCounter, getAlertIndex(deviceCounter));
-		}
-	}
-}
+/* **************************************************** */
+/*
+	Below are the functions that the devicewatch.js uses.
+*/
 
+
+/*
+	Function: loadConfiguration(callback)
+
+	Parameters:
+		callback = the Callback function that this function calls if configuration is sucessfull.  If it is not sucessful, nothing is called, however an error is placed to the console
+*/
 function loadConfiguration(callback) {
 	var fs = require('fs');
 	var csv = require('csv');
@@ -143,7 +145,24 @@ function loadConfiguration(callback) {
 	});
 }
 
-function runFing(fingCommand)
+/*
+	Function: runFing
+
+	Parameters:
+		None
+
+	Description:
+		This function spawns the Fing process, and then asssigns a action to take upon output from Fing.
+
+		As a critical function for the applicaiton, this function parses the output from Fing and decides what to do with it.
+			Critical to this, is the rules that review the raw Fing results, and determine if it's a log message from Fing, or a device action.
+			If a device action needs to be taken, parseDevice() is called.
+
+
+	Known issues:
+		If a device has the keywords "Discovery" "hosts up" or "round" in them, this may been seen as a line to ignore.
+*/
+function runFing()
 {
 	fingCommand = spawn('sudo',['fing', '-n', fingCommand_netmask, '-o', 'log,csv,console']);
 
@@ -497,6 +516,15 @@ function getFQDN(deviceIndex) {
 	return (networkDevices[deviceIndex][9]);
 }
 
+function refreshAlertDeviceIndigoStatus() {
+	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
+	{
+		if (isAlertDevice(deviceCounter))
+		{
+			updateIndigoState(deviceCounter, getAlertIndex(deviceCounter));
+		}
+	}
+}
 
 function processDevices() {
 	if (debug)
