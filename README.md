@@ -23,19 +23,19 @@ Configuration
 
 2. Modify the new configuration file based on the instructions in the comments
 
-3. Set the script to load on bootup.  This can be done with a simple init.d script for Linux.  I have not done this yet for Mac OS X.
+3. Run manually via: node devicewatch.js
+	OR - Set the script to load on bootup.  This can be done with a simple init.d script for Linux.  I have not done this yet for Mac OS X.
 
-4. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable Debugging via the code.
-
-5. Run the devicewatch script: node devicewatch.js
-	
 	OS X Users: in order to automate the entering of your admin password (required for Fing), use the following way of launching the devicewatch.js script:
 		
 		echo {Admin Password} | sudo -S node devicewatch.js
 
+4. Be sure to rotate the logs, or send the output to null.  The program is rather verbose, especially if you enable debugging via the configuration file.
+
 Change Log
 ---
 
-2013-12-21: Added a configuration file, no need to edit the code to set your alert devices any longer.
-				
-				Added support for password protected Indigo servers, set your password in the configuration file
+2013-12-21: Added a configuration file support, no need to edit the code to set your alert devices any longer.	
+			Added support for password protected Indigo servers, set your password in the configuration file.
+			No longer uses "curl" to send updates to Indigo
+			Added support to check indigo's current state and only sends updates when Fing reports a difference than Indigo's saved value
