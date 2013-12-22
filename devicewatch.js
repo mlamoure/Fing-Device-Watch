@@ -44,22 +44,24 @@ var util  = require('util'),
 	indigo_Password_Protect = false,
 	indigo_Password,
 	indigo_UserName,
-	scan_interval_minutes = 1,
-	scan_interval = scan_interval_minutes * 60 * 1000;
+	indigo_scan_interval,
+	device_scan_interval,
+	convert_min_to_ms = 60 * 1000;
 
 
 /* THIS IS THE START OF THE APP */
 loadConfiguration(function() {
 	runFing();
+
+	setInterval(function() {
+		processDevices();
+	}, device_scan_interval);
+
+	setInterval(function() {
+		refreshAlertDeviceIndigoStatus();
+	}, indigo_scan_interval);
+
 });
-
-setInterval(function() {
-	processDevices();
-}, scan_interval);
-
-setInterval(function() {
-	refreshAlertDeviceIndigoStatus();
-}, scan_interval);
 
 function refreshAlertDeviceIndigoStatus() {
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
@@ -80,6 +82,9 @@ function loadConfiguration(callback) {
 	.to.array( function(data, count) {
 		for (var i = 0; i < count; i++)
 		{
+			// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
+			console.log("** (" + getCurrentTime() + ") CONFIGURATION: About to process: " + data[i]);
+
 			if (data[i][0] == "AlertDevice")
 			{
 				alertDevices[alertDevices.length] = [data[i][1], data[i][2], data[i][3], data[i][4], data[i][5]];
@@ -112,13 +117,27 @@ function loadConfiguration(callback) {
 				if (data[i][1] == "true") debug = true;
 				else debug = false;
 			}
+			else if (data[i][0] == "Indigo_Scan_Interval")
+			{
+				indigo_scan_interval = data[i][1] * convert_min_to_ms;
+
+				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Indigo Scan Interval set to: " + indigo_scan_interval);				
+			}
+			else if (data[i][0] == "Device_Scan_Interval")
+			{
+				device_scan_interval = data[i][1] * convert_min_to_ms;
+
+				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Device Scan Interval set to: " + device_scan_interval);				
+			}
 		}
 	})
 	.on('end', function(count){
   		callback();
 	})
 	.on('error', function(error){
-	  console.log("Something is wrong with your config file: " + error.message);
+	  console.log("** (" + getCurrentTime() + ") Something is wrong with your config file: " + error.message);
 	});
 }
 

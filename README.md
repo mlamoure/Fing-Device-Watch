@@ -19,7 +19,7 @@ Note: this works great on a Raspberry Pi using these instructions to install Nod
 Configuration
 ---
 
-1. Create a copy of devicewatch.conf.sample and name it devicewatch.conf
+1. Create a copy of devicewatch.conf.sample and name it devicewatch.conf.  Keep it in the same directory as devicewatch.js.
 
 2. Modify the new configuration file based on the instructions in the comments
 
