@@ -1,6 +1,8 @@
 Fing Device Watch
 ---
-A node.js implementation of a Fing wrapper that can notify via HTTP (more methods to be added in the future) when a device on your network changes. Useful for Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.
+A node.js implementation of a Fing wrapper that can notify via HTTP (more methods to be added in the future) when a device on your network changes. Designed to be used as a dedicated and persistent network monitor that can notify home automation servers when specific devices come on and offline.  Additionally, there is the start to a implementation of a whitelist, where non-whitelisted devices will be notified to you via email.
+
+devicewatch.js can be extremely useful for Perceptive Automation's Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.
 
 Requirements & Installation
 ---
@@ -14,7 +16,7 @@ Requirements & Installation
 						npm install --save moment
 						npm install needle
 
-Note: this works great on a Raspberry Pi using these instructions to install Node.js : http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
+Note: this works great on a Raspberry Pi using these instructions to install Node.js: http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
 
 Configuration
 ---
