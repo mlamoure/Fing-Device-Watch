@@ -5,14 +5,14 @@ A node.js implementation of a Fing wrapper that can notify via HTTP when a devic
 Requirements & Installation
 ---
 
-	1. Fing (http://www.overlooksoft.com/fing)
+	1. Install Fing (http://www.overlooksoft.com/fing)
 
-	2. Node.js (http://nodejs.org)
+	2. Install Node.js (http://nodejs.org)
 
-	3. NPM Packages: 
-						csv: npm install csv
-						moment: npm install --save moment
-						needle: npm install needle
+	3. Install the following NPM Packages: 
+						npm install csv
+						npm install --save moment
+						npm install needle
 
 Note: this works great on a Raspberry Pi using these instructions to install Node.js : http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
 
