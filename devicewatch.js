@@ -191,7 +191,7 @@ function updateDevice(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
 		if (alertDeviceFlag && !state)
 		{
 			alertIndex = getAlertIndex(deviceIndex);
-			alertExpiration = getNewAlertTimeoutExpriation(deviceIndex);
+			alertExpiration = getNewAlertTimeoutExpriation(alertIndex);
 		}		
 	}
 
