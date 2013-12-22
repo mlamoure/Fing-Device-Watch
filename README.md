@@ -9,7 +9,7 @@ Requirements & Installation
 
 	2. Install Node.js (http://nodejs.org)
 
-	3. Install the following NPM Packages: 
+	3. Install the following NPM Packages that the script is dependent on: 
 						npm install csv
 						npm install --save moment
 						npm install needle

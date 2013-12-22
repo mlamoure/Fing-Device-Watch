@@ -1,3 +1,32 @@
+/*
+	Fing Output example:
+		2013/12/12 18:14:32;up;10.66.0.11;;camera2.home.mikelamoureux.net;F0:7D:68:09:B7:6B;D-Link
+
+	Fing Array:
+		[0]: Date
+		[1]: State (up, down, changed)
+		[2]: IP Address
+		[3]: Unknown
+		[4]: DNS Domain
+		[5]: Mac Address
+		[6]: Manufacturer
+		[7]: Common Known Name
+
+
+	[NetworkDevices]:
+		[0] = Mac Address
+		[1] = State
+		[2] = IP Address
+		[3] = White Listed (true or false)
+		[4] = Alert Device (true or false)
+		[5] = Manufacturer
+		[6] = Fing Timestamp
+		[7] = Timeout expiration for declaring "off" network
+		[8] = Previously Reported (for non-whitelisted devices)
+		[9] = Fully qualified domain name
+		[10] = Indigo State
+*/
+
 var util  = require('util'),
     spawn = require('child_process').spawn,
     exec = require('child_process').exec,
@@ -15,7 +44,8 @@ var util  = require('util'),
 	indigo_Password_Protect = false,
 	indigo_Password,
 	indigo_UserName,
-	scan_interval = 1 * 60 * 1000;
+	scan_interval_minutes = 1,
+	scan_interval = scan_interval_minutes * 60 * 1000;
 
 
 /* THIS IS THE START OF THE APP */
@@ -94,19 +124,6 @@ function loadConfiguration(callback) {
 
 function runFing(fingCommand)
 {
-	// Output example:
-	// 		2013/12/12 18:14:32;up;10.66.0.11;;camera2.home.mikelamoureux.net;F0:7D:68:09:B7:6B;D-Link
-
-	//		[0]: Date
-	//		[1]: State (up, down, changed)
-	//		[2]: IP Address
-	//		[3]: Unknown
-	//		[4]: DNS Domain
-	//		[5]: Mac Address
-	//		[6]: Manufacturer
-	//		[7]: Common Known Name
-
-
 	fingCommand = spawn('sudo',['fing', '-n', fingCommand_netmask, '-o', 'log,csv,console']);
 
 	fingCommand.stdout.on('data', function (data) {
@@ -297,6 +314,10 @@ function isReadyforAlert(deviceIndex) {
 	if (!isAlertDevice(deviceIndex)) {
 		return false;
 	}
+
+	if (typeof getIndigoState(deviceIndex) === 'undefined') {
+		updateIndigoState(deviceIndex, alertIndex);
+	}
 	
 	console.log("** (" + getCurrentTime() + ") Cached Indigo value of " + alertDevices[alertIndex][0] + " is: " + getIndigoState(deviceIndex) + ", current state from fing is " + getDeviceState(deviceIndex));
 
@@ -380,7 +401,7 @@ function updateIndigoState(deviceIndex, alertIndex)
 		csv()
 		.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
 		.to.array( function(data, count) {
-			if (debug) console.log(data);
+			if (debug) console.log("** (" + getCurrentTime() + ") Raw HTTP request results from Indigo: \n" + body);
 			indigoValue = data[5][1] == "true";
 			
 			logToConsole(deviceIndex);
@@ -457,20 +478,6 @@ function getFQDN(deviceIndex) {
 
 
 function processDevices() {
-	/*
-		[0] = Mac Address
-		[1] = State
-		[2] = IP Address
-		[3] = White Listed (true or false)
-		[4] = Alert Device (true or false)
-		[5] = Manufacturer
-		[6] = Fing Timestamp
-		[7] = Timeout expiration for declaring "off" network
-		[8] = Previously Reported (for non-whitelisted devices)
-		[9] = Fully qualified domain name
-		[10] = Indigo State
-	*/
-	
 	if (debug)
 	{
 		console.log ("\n***************** " + getCurrentTime() + " -- Processing the list of known devices -- **************");
@@ -479,10 +486,7 @@ function processDevices() {
 
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
 	{
-		if (isAlertDevice(deviceCounter))
-		{
-			logToConsole(deviceCounter);
-		}
+		logToConsole(deviceCounter);
 
 		if (isReadyforAlert(deviceCounter))
 		{
