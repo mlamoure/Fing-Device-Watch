@@ -408,7 +408,7 @@ function isWhiteListedDevice(deviceIndex)
 
 function wasPreviouslyReported(deviceIndex)
 {
-	return (networkDevices[deviceIndex][9]);
+	return (networkDevices[deviceIndex][8]);
 }
 
 function getWhiteListIndex(deviceIndex) {
