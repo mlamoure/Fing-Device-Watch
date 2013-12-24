@@ -22,6 +22,12 @@ AlertDevice, My Phone, xx:xx:xx:xx:xx:xx, indigo/http, http://192.168.1.100:8176
 WhiteListDevice, My Macbook Pro, xx:xx:xx:xx:xx:xx
 WhiteListDevice, My Desktop, xx:xx:xx:xx:xx:xx
 
+# Create alert methods for when unknown devices are discovered on your network (devices that are not in your white list or a AlertDevice).  Supported mode is currently email only.
+# NOTE: Your machine must be configued to use the "mail" command
+#			[0]: Mode ("email" is only supported)
+#           [1]: Value for the mode, a.k.a. your email address
+UnknownDeviceNotificationAlert, email, user@email.com
+
 # This is a critical configuration item, the Fing Netmask of the network you want to monitor.
 # 	Example: Netmask, 192.168.1.1/24
 #		This example will monitor your network if you are using 192.168.*.* IP Addresses

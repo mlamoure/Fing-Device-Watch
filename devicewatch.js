@@ -36,6 +36,7 @@ var util  = require('util'),
 	networkDevices = new Array,
 	whiteListDevices = new Array,
 	alertDevices = new Array,
+	notificationMethods = new Array,
 	moment = require('moment'),
 	fingCommand_netmask,
 	dateformat = "YYYY/MM/DD HH:mm:ss",
@@ -134,6 +135,11 @@ function loadConfiguration(callback) {
 
 				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
 				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Device Scan Interval set to: " + device_scan_interval);				
+			}
+			else if (data[i][0] == "UnknownDeviceNotificationAlert")
+			{
+				// since we support email only atm, this creates a array of notification emails to send.
+				notificationMethods[notificationMethods.length] = data[i][2];
 			}
 		}
 	})
@@ -286,31 +292,40 @@ function updateDevice(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
 	logToConsole(deviceIndex);
 }
 
+function outputDeviceInfo(deviceIndex)
+{
+	var alertIndex = getAlertIndex(deviceIndex);
+	var whiteListIndex = getWhiteListIndex(deviceIndex);
+
+	var outputString = "";
+
+	outputString += "\t***************** -- Device Details -- **************\n";
+	outputString += "\t\tCurrent Time: " + getCurrentTime() + "\n";
+	outputString += "\t\tIndex: " + deviceIndex + "\n";
+	outputString += "\t\tMac: " + getMacAddress(deviceIndex) + "\n";
+	outputString += "\t\tIP Address: " + getIPAddress(deviceIndex) + "\n";
+	outputString += "\t\tFQDN: " + getFQDN(deviceIndex) + "\n";
+	outputString += "\t\tState: " + getDeviceState(deviceIndex) + "\n";
+
+	outputString += "\t\tWhite List Flag: " + isWhiteListedDevice(deviceIndex)+ " (index: " + whiteListIndex + ")" + "\n";
+	outputString += "\t\tAlert Device Flag: " + isAlertDevice(deviceIndex) + " (index: " + alertIndex + ")" + "\n";
+
+	if (isAlertDevice(deviceIndex)) outputString += "\t\tAlert Device Name: " + alertDevices[alertIndex][0] + "\n";
+	if (isWhiteListedDevice(deviceIndex)) outputString += "\t\tWhite List Device Name: " + whiteListDevices[whiteListIndex][0] + "\n";
+
+	outputString += "\t\tFing last update timestamp: " + getFingTimestamp(deviceIndex) + "\n";
+	outputString += "\t\t\"Off network\" Expiration Time: " + getExpirationTime(deviceIndex) + "\n";
+	outputString += "\t\tCached Indigo Value: " + getIndigoState(deviceIndex) + "\n";
+	outputString += "\t*****************************************************************\n";
+
+	return (outputString);
+}
+
 function logToConsole(deviceIndex)
 {
 	if (debug)
 	{
-		var alertIndex = getAlertIndex(deviceIndex);
-		var whiteListIndex = getWhiteListIndex(deviceIndex);
-
-		console.log("\t***************** -- Device Details -- **************");
-		console.log("\t\tCurrent Time: " + getCurrentTime());
-		console.log("\t\tIndex: " + deviceIndex);
-		console.log("\t\tMac: " + getMacAddress(deviceIndex));
-		console.log("\t\tIP Address: " + getIPAddress(deviceIndex));
-		console.log("\t\tFQDN: " + getFQDN(deviceIndex));
-		console.log("\t\tState: " + getDeviceState(deviceIndex));
-
-		console.log("\t\tWhite List Flag: " + isWhiteListedDevice(deviceIndex)+ " (index: " + whiteListIndex + ")");
-		console.log("\t\tAlert Device Flag: " + isAlertDevice(deviceIndex) + " (index: " + alertIndex + ")");
-
-		if (isAlertDevice(deviceIndex)) console.log("\t\tAlert Device Name: " + alertDevices[alertIndex][0]);
-		if (isWhiteListedDevice(deviceIndex)) console.log("\t\tWhite List Device Name: " + whiteListDevices[whiteListIndex][0]);
-
-		console.log("\t\tFing last update timestamp: " + getFingTimestamp(deviceIndex));
-		console.log("\t\t\"Off network\" Expiration Time: " + getExpirationTime(deviceIndex));
-		console.log("\t\tCached Indigo Value: " + getIndigoState(deviceIndex));
-		console.log ("\t*****************************************************************\n");	
+		console.log(outputDeviceInfo(deviceIndex));
 	}
 }
 
@@ -491,7 +506,14 @@ function getWhiteListIndex(deviceIndex) {
 }
 
 function reportUnknownDevice(deviceIndex) {
-	console.log("** (" + getCurrentTime() + ") ALERT ** Found a device that is not cleared to be on the network: " + networkDevices[deviceIndex][0] + ", " + networkDevices[deviceIndex][2]);
+
+	var alertText = "ALERT ** Found a device that is not cleared to be on the network: " + outputDeviceInfo(deviceIndex);
+
+	console.log("** (" + getCurrentTime() + ") " + alertText);
+	for (var i=0; i < notificationMethods.length; i++)
+	{
+	    exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + notificationMethods[i], function(error, stdout, stderr){ callback(stdout); });
+	}
 
 	networkDevices[deviceIndex][8] = true;
 }
