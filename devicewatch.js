@@ -300,22 +300,22 @@ function outputDeviceInfo(deviceIndex)
 	var outputString = "";
 
 	outputString += "\t***************** -- Device Details -- **************\n";
-	outputString += "\t\tCurrent Time: " + getCurrentTime() + "\n";
-	outputString += "\t\tIndex: " + deviceIndex + "\n";
+	outputString += "\t\tTimestamp: " + getCurrentTime() + "\n";
+	if (debug) outputString += "\t\tIndex: " + deviceIndex + "\n";
 	outputString += "\t\tMac: " + getMacAddress(deviceIndex) + "\n";
 	outputString += "\t\tIP Address: " + getIPAddress(deviceIndex) + "\n";
 	outputString += "\t\tFQDN: " + getFQDN(deviceIndex) + "\n";
 	outputString += "\t\tState: " + getDeviceState(deviceIndex) + "\n";
 
-	outputString += "\t\tWhite List Flag: " + isWhiteListedDevice(deviceIndex)+ " (index: " + whiteListIndex + ")" + "\n";
-	outputString += "\t\tAlert Device Flag: " + isAlertDevice(deviceIndex) + " (index: " + alertIndex + ")" + "\n";
+	if (debug) outputString += "\t\tis a Whitelisted device?: " + isWhiteListedDevice(deviceIndex)+ " (index: " + whiteListIndex + ")" + "\n";
+	if (debug) outputString += "\t\tis a Alert Notified device?: " + isAlertDevice(deviceIndex) + " (index: " + alertIndex + ")" + "\n";
 
-	if (isAlertDevice(deviceIndex)) outputString += "\t\tAlert Device Name: " + alertDevices[alertIndex][0] + "\n";
+	if (alertIndex > -1) outputString += "\t\tAlert Device Name: " + alertDevices[alertIndex][0] + "\n";
 	if (isWhiteListedDevice(deviceIndex)) outputString += "\t\tWhite List Device Name: " + whiteListDevices[whiteListIndex][0] + "\n";
 
 	outputString += "\t\tFing last update timestamp: " + getFingTimestamp(deviceIndex) + "\n";
 	outputString += "\t\t\"Off network\" Expiration Time: " + getExpirationTime(deviceIndex) + "\n";
-	outputString += "\t\tCached Indigo Value: " + getIndigoState(deviceIndex) + "\n";
+	if (alertIndex > -1) outputString += "\t\tCached Indigo Value: " + getIndigoState(deviceIndex) + "\n";
 	outputString += "\t*****************************************************************\n";
 
 	return (outputString);
@@ -507,7 +507,7 @@ function getWhiteListIndex(deviceIndex) {
 
 function reportUnknownDevice(deviceIndex) {
 
-	var alertText = "ALERT ** Found a device that is not cleared to be on the network: " + outputDeviceInfo(deviceIndex);
+	var alertText = "ALERT ** Found a device that is not cleared to be on the network: \n" + outputDeviceInfo(deviceIndex);
 
 	console.log("** (" + getCurrentTime() + ") " + alertText);
 	for (var i=0; i < notificationMethods.length; i++)

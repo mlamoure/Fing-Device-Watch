@@ -23,8 +23,8 @@ WhiteListDevice, My Macbook Pro, xx:xx:xx:xx:xx:xx
 WhiteListDevice, My Desktop, xx:xx:xx:xx:xx:xx
 
 # Create alert methods for when unknown devices are discovered on your network (devices that are not in your white list or a AlertDevice).  Supported mode is currently email only.
-# NOTE: Your machine must be configued to use the "mail" command
-#			[0]: Mode ("email" is only supported)
+# NOTE: Your machine must be configued to use the mail command
+#			[0]: Mode (email is only supported)
 #           [1]: Value for the mode, a.k.a. your email address
 UnknownDeviceNotificationAlert, email, user@email.com
 
