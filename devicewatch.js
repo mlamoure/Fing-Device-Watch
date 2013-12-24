@@ -512,7 +512,10 @@ function reportUnknownDevice(deviceIndex) {
 	console.log("** (" + getCurrentTime() + ") " + alertText);
 	for (var i=0; i < notificationMethods.length; i++)
 	{
-	    exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + notificationMethods[i], function(error, stdout, stderr){ callback(stdout); });
+	    exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + notificationMethods[i], function(error, stdout, stderr)
+	    	{
+	    		console.log(stdout); 
+	    	});
 	}
 
 	networkDevices[deviceIndex][8] = true;
