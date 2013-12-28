@@ -552,6 +552,8 @@ function refreshAlertDeviceIndigoStatus() {
 }
 
 function processDevices() {
+	var whiteListCounter = 0;
+	
 	if (debug)
 	{
 		console.log ("\n***************** " + getCurrentTime() + " -- Processing the list of known devices -- **************");
@@ -567,11 +569,18 @@ function processDevices() {
 			alertDevice(deviceCounter);
 		}
 
-		if (!isWhiteListedDevice(deviceCounter) && !wasPreviouslyReported(deviceCounter))
+		if (!isWhiteListedDevice(deviceCounter))
 		{
-			reportUnknownDevice(deviceCounter);
+			if (!wasPreviouslyReported(deviceCounter))
+			{
+				reportUnknownDevice(deviceCounter);
+			}
+			whiteListCounter++;
 		}
+
 	}
+
+	console.log ("\tNumber of non-whitelisted devices that I am aware of: " + whiteListCounter);
 	
 	if (debug) console.log ("Nothing more to do...\n*****************************************************************\n");	
 }
