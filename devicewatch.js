@@ -606,7 +606,7 @@ function scanDevices(reProcess) {
 
 	}
 
-	console.log ("\tNumber of non-whitelisted devices that I've become aware of since initial start (includes inactive devices on the network): " + whiteListCounter);
+	console.log ("\tNumber of non-whitelisted devices that I've become aware of since initial start (includes inactive devices no longer on the network): " + whiteListCounter);
 	console.log ("\tNumber of non-whitelisted devices that are currently active on the network: " + whiteListOnlineCounter);
 	
 	if (debug) console.log ("Nothing more to do...\n*****************************************************************\n");	
