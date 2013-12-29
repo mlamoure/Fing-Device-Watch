@@ -34,15 +34,15 @@ var util  = require('util'),
 	csv = require('csv'),
 	needle = require('needle'),
 	networkDevices = new Array,
-	whiteListDevices = new Array,
-	alertDevices = new Array,
-	notificationMethods = new Array,
+	whiteListDevices,
+	alertDevices,
+	notificationMethods,
 	moment = require('moment'),
 	fingCommand_netmask,
 	dateformat = "YYYY/MM/DD HH:mm:ss",
 	fingCommand,
 	debug = false,
-	indigo_Password_Protect = false,
+	indigo_Password_Protect,
 	indigo_Password,
 	indigo_UserName,
 	indigo_scan_interval,
@@ -55,12 +55,20 @@ loadConfiguration(function() {
 	runFing();
 
 	setInterval(function() {
-		processDevices();
+		scanDevices(false);
 	}, device_scan_interval);
 
 	setInterval(function() {
 		refreshAlertDeviceIndigoStatus();
 	}, indigo_scan_interval);
+
+	fs.watchFile('devicewatch.conf', function (event, filename) {
+		console.log("** (" + getCurrentTime() + ") RELOADING CONFIGURATION");
+
+		loadConfiguration(function() {
+			scanDevices(true);
+		});
+	});
 
 });
 
@@ -79,6 +87,17 @@ loadConfiguration(function() {
 function loadConfiguration(callback) {
 	var fs = require('fs');
 	var csv = require('csv');
+
+	whiteListDevices = new Array;
+	alertDevices = new Array;
+	fingCommand_netmask = "";
+	indigo_Password_Protect = false;
+	indigo_UserName = "";
+	indigo_Password = "";
+	debug = false;
+	indigo_scan_interval = 5 * convert_min_to_ms;
+	device_scan_interval = 2 * convert_min_to_ms;
+	notificationMethods = new Array;
 
 	csv()
 	.from.path(__dirname+'/devicewatch.conf', { delimiter: ',', comment: '#', ltrim: 'true', rtrim: 'true' })
@@ -144,7 +163,7 @@ function loadConfiguration(callback) {
 		}
 	})
 	.on('end', function(count){
-  		callback();
+		if (callback != null) callback();
 	})
 	.on('error', function(error){
 	  console.log("** (" + getCurrentTime() + ") Something is wrong with your config file: " + error.message);
@@ -184,7 +203,7 @@ function runFing()
 				if (lines[i].length > 5 && lines[i].indexOf("Discovery") == -1 && lines[i].indexOf("hosts up") == -1 && lines[i].indexOf("round") == -1)
 				{
 					console.log("** (" + getCurrentTime() + ") Line from Fing being processed: " + lines[i]);
-					parseDevice(lines[i]);
+					parseFingOutput(lines[i]);
 				}
 				else if (lines[i].length > 5)
 				{
@@ -198,7 +217,7 @@ function runFing()
 	});	
 }
 
-function parseDevice(data) {
+function parseFingOutput(data) {
 	//console.log(data.toString());
 	csv()
 	.from.string(data.toString(), {delimiter: ';'})
@@ -210,7 +229,7 @@ function parseDevice(data) {
 		var timestamp = device[0][0];
 		var fqdn = device[0][4];
 
-		updateDevice(mac, state == "up", ip_address, manufacturer, timestamp, fqdn);
+		processFingUpdate(mac, state == "up", ip_address, manufacturer, timestamp, fqdn);
 	});
 }
 
@@ -227,7 +246,7 @@ function getDeviceIndex(mac)
 	return -1;
 }
 
-function updateDevice(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
+function processFingUpdate(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
 {
 	var whiteListIndex = -1;
 	var alertIndex = -1;
@@ -271,20 +290,7 @@ function updateDevice(mac, state, ip_address, manufacturer, fingTimestamp, fqdn)
 	// For new devices, we need to check if the device is an "Alert Device", only for new devices
 	if (newRecord)
 	{
-		alertIndex = getAlertIndex(deviceIndex);
-		whiteListIndex = getWhiteListIndex(deviceIndex);
-
-		if (alertIndex >= 0)
-		{
-			alertDeviceFlag = true;
-			networkDevices[deviceIndex][4] = alertDeviceFlag;
-		}
-
-		if (whiteListIndex >= 0)
-		{
-			whiteListDeviceFlag = true;
-			networkDevices[deviceIndex][3] = whiteListDeviceFlag;
-		}
+		processDevice(deviceIndex);
 	}
 
 	if (isReadyforAlert(deviceIndex)) alertDevice(deviceIndex);
@@ -551,7 +557,22 @@ function refreshAlertDeviceIndigoStatus() {
 	}
 }
 
-function processDevices() {
+function processDevice(deviceIndex) {
+	alertIndex = getAlertIndex(deviceIndex);
+	whiteListIndex = getWhiteListIndex(deviceIndex);
+
+	if (alertIndex >= 0)
+	{
+		networkDevices[deviceIndex][4] = alertDeviceFlag;
+	}
+
+	if (whiteListIndex >= 0)
+	{
+		networkDevices[deviceIndex][3] = whiteListDeviceFlag;
+	}
+}
+
+function scanDevices(reProcess) {
 	var whiteListCounter = 0;
 	var whiteListOnlineCounter = 0;
 
@@ -563,6 +584,8 @@ function processDevices() {
 
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
 	{
+		if (reProcess) processDevice(deviceCounter);
+
 		logToConsole(deviceCounter);
 
 		if (isReadyforAlert(deviceCounter))
