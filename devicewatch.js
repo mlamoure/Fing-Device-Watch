@@ -561,15 +561,8 @@ function processDevice(deviceIndex) {
 	alertIndex = getAlertIndex(deviceIndex);
 	whiteListIndex = getWhiteListIndex(deviceIndex);
 
-	if (alertIndex >= 0)
-	{
-		networkDevices[deviceIndex][4] = alertDeviceFlag;
-	}
-
-	if (whiteListIndex >= 0)
-	{
-		networkDevices[deviceIndex][3] = whiteListDeviceFlag;
-	}
+	networkDevices[deviceIndex][4] = alertIndex >= 0;
+	networkDevices[deviceIndex][3] = whiteListIndex >= 0;
 }
 
 function scanDevices(reProcess) {

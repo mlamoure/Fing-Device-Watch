@@ -44,10 +44,11 @@ Requirements & Installation
 Change Log
 ---
 
+2013-12-29: Added support for configuraiton file changes while devicewatch.js is running.  This could potentially allow for integration from outside scripts where you may add Whitelist or Alert devices and devicewatch.js will react in real time.  The configuration will be reloaded once changes are observed.
+			Added support for notification method (email) for non-whitelisted devices.
+			
 2013-12-21: Added a configuration file support, no need to edit the code to set your alert devices any longer.	
 			Added support for password protected Indigo servers, set your password in the configuration file.
 			No longer uses "curl" to send updates to Indigo
 			Added support to check indigo's current state and only sends updates when Fing reports a difference than Indigo's saved value
 
-2013-12-29: Added support for configuraiton file changes while devicewatch.js is running.  This could potentially allow for integration from outside scripts where you may add Whitelist or Alert devices and devicewatch.js will react in real time.  The configuration will be reloaded once changes are observed.
-			Added support for notification method (email) for non-whitelisted devices.
