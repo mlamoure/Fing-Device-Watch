@@ -498,12 +498,6 @@ function getWhiteListIndex(deviceIndex) {
 	{
 		if (whiteListDevices[whiteListCounter][1].toUpperCase() == networkDevices[deviceIndex][0])
 		{
-			// check to see if it's already marked as a whitelisted device
-			if (!networkDevices[deviceIndex][3])
-			{
-				console.log("** (" + getCurrentTime() + ") Marking whitelisted device: " + whiteListDevices[whiteListCounter][0]);
-				networkDevices[deviceIndex][3] = true;
-			}
 			return whiteListCounter;
 		}
 	}
@@ -560,6 +554,9 @@ function refreshAlertDeviceIndigoStatus() {
 function processDevice(deviceIndex) {
 	alertIndex = getAlertIndex(deviceIndex);
 	whiteListIndex = getWhiteListIndex(deviceIndex);
+
+	if (networkDevices[deviceIndex][4] != alertIndex >= 0 && debug) console.log ("** (" + getCurrentTime() + ") Marking alert (Alert Index: " + alertIndex + ") device: " + alertDevices[alertIndex][0]);
+	if (networkDevices[deviceIndex][3] != whiteListIndex >= 0 && debug) console.log ("** (" + getCurrentTime() + ") Marking white list item (WL Index: " + whiteListIndex + ") device: " + whiteListDevices[whiteListIndex][0]);
 
 	networkDevices[deviceIndex][4] = alertIndex >= 0;
 	networkDevices[deviceIndex][3] = whiteListIndex >= 0;
