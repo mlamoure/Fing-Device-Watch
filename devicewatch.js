@@ -88,8 +88,8 @@ function loadConfiguration(callback) {
 	var fs = require('fs');
 	var csv = require('csv');
 
-	whiteListDevices = new Array;
-	alertDevices = new Array;
+	whiteListDevices = [];
+	alertDevices = [];
 	fingCommand_netmask = "";
 	indigo_Password_Protect = false;
 	indigo_UserName = "";
@@ -97,7 +97,7 @@ function loadConfiguration(callback) {
 	debug = false;
 	indigo_scan_interval = 5 * convert_min_to_ms;
 	device_scan_interval = 2 * convert_min_to_ms;
-	notificationMethods = new Array;
+	notificationMethods = [];
 
 	csv()
 	.from.path(__dirname+'/devicewatch.conf', { delimiter: ',', comment: '#', ltrim: 'true', rtrim: 'true' })
