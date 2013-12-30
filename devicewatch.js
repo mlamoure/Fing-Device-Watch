@@ -571,8 +571,8 @@ function scanDevices(reProcess) {
 
 	if (debug)
 	{
-		console.log ("\n***************** " + getCurrentTime() + " -- Processing the list of known devices -- **************");
-		console.log ("\tNumber of devices I am aware of: " + networkDevices.length);
+		console.log ("** (" + getCurrentTime() + ") -- Processing the list of known devices -- **************");
+		console.log ("** (" + getCurrentTime() + ") Number of devices I am aware of: " + networkDevices.length);
 	}
 
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
@@ -599,8 +599,8 @@ function scanDevices(reProcess) {
 
 	}
 
-	console.log ("\tNumber of non-whitelisted devices that I've become aware of since initial start (includes inactive devices no longer on the network): " + whiteListCounter);
-	console.log ("\tNumber of non-whitelisted devices that are currently active on the network: " + whiteListOnlineCounter);
+	console.log("** (" + getCurrentTime() + ") Number of non-whitelisted devices that I've become aware of since initial start (includes inactive devices no longer on the network): " + whiteListCounter);
+	console.log("** (" + getCurrentTime() + ") Number of non-whitelisted devices that are currently active on the network: " + whiteListOnlineCounter);
 	
-	if (debug) console.log ("Nothing more to do...\n*****************************************************************\n");	
+	if (debug) console.log ("** (" + getCurrentTime() + ") *****************************************************************\n");	
 }
