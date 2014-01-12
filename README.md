@@ -2,18 +2,18 @@ Fing Device Watch
 ---
 A node.js implementation of a Fing wrapper that can notify via HTTP (more methods to be added in the future) when a device on your network changes. Designed to be used as a dedicated and persistent network monitor that can notify home automation servers when specific devices come on and offline.  Additionally, there is the start to a implementation of a whitelist, where non-whitelisted devices will be notified to you via email.
 
-devicewatch.js can be extremely useful for Perceptive Automation's Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.  Once configured, your home automation system can react to changes of your arrival, or alter behavior based on your known presence.
+devicewatch.js can be extremely useful for Perceptive Automation's Indigo Home Automation Server as a proximity sensor when your cellphone arrives on a network.  Once configured, your home automation system can react to changes of your arrival, or alter behavior based on your known presence.  devicewatch.js does not need to be on the same machine as your Indigo server, as long as it's on the same network.
 
 devicewatch.js works great on a Raspberry Pi as a dedicated netowrk monitor.  You can get your Raspberry Pi set up with Node.js using these instructions: http://blog.rueedlinger.ch/2013/03/raspberry-pi-and-nodejs-basic-setup/
 
-Requirements & Installation
+Installation
 ---
 
 	1. Install Fing (http://www.overlooksoft.com/fing)
 
 	2. Install Node.js (http://nodejs.org)
 
-	3. Install the following NPM Packages that the script is dependent on: 
+	3. Install the following NPM Packages that devicewatch.js is dependent on: 
 						npm install csv
 						npm install --save moment
 						npm install needle
@@ -43,6 +43,7 @@ Requirements & Installation
 
 Change Log
 ---
+2014-1-12: Fixed some async annoyances that would update Indigo more frequently than needed.
 
 2013-12-29: Added support for configuraiton file changes while devicewatch.js is running.  This could potentially allow for integration from outside scripts where you may add Whitelist or Alert devices and devicewatch.js will react in real time.  The configuration will be reloaded once changes are observed.
 			Added support for notification method (email) for non-whitelisted devices.

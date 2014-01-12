@@ -378,24 +378,30 @@ function isReadyforAlert(deviceIndex) {
 
 	if (typeof getIndigoState(deviceIndex) === 'undefined') {
 		updateIndigoState(deviceIndex, alertIndex);
+
+		// since we don't know the indigo state, we will let that update asyncronously, but since that will not finish immediately, update if the status is true
+		return getDeviceState(deviceIndex);
 	}
-	
+
 	console.log("** (" + getCurrentTime() + ") Cached Indigo value of " + alertDevices[alertIndex][0] + " is: " + getIndigoState(deviceIndex) + ", current state from fing is " + getDeviceState(deviceIndex));
 
 	if (!getIndigoState(deviceIndex) && getDeviceState(deviceIndex))
 	{
+		console.log("** (" + getCurrentTime() + ") Will send an alert for device " + alertDevices[alertIndex][0] + " since Indigo state is false and the device is online");
+
 		return true;
 	}
-	else if (getDeviceState(deviceIndex) == getIndigoState(deviceIndex))
+	if (getDeviceState(deviceIndex) == getIndigoState(deviceIndex))
 	{
 		console.log("** (" + getCurrentTime() + ") Not going to send an alert for device " + alertDevices[alertIndex][0] + " because Indigo is already set appropriately");
-		return false;		
+		return false;
 	}
-	else if (getCurrentTime() < getExpirationTime(deviceIndex)) {
+	else if (!getDeviceState(deviceIndex) && (getCurrentTime() < getExpirationTime(deviceIndex))) {
 		console.log("** (" + getCurrentTime() + ") Not going to send an alert for device " + alertDevices[alertIndex][0] + " because the expiration time has not passed (" + getExpirationTime(deviceIndex) + ")");
 		return false;
 	}
 
+	console.log("** (" + getCurrentTime() + ") Will send an alert for device " + alertDevices[alertIndex][0]);
 	return true;
 }
 
@@ -433,6 +439,8 @@ function alertDevice(deviceIndex) {
 			//
 		})
 	}
+
+	networkDevices[deviceIndex][10] = getDeviceState(deviceIndex);
 }
 
 function getDeviceState(deviceIndex)
@@ -470,7 +478,7 @@ function updateIndigoState(deviceIndex, alertIndex)
 			console.log("** (" + getCurrentTime() + ") Obtained and saved the current value of indigo variable " + alertDevices[alertIndex][0] + " is: " + indigoValue);
 			networkDevices[deviceIndex][10] = indigoValue;
 		});
-	});				
+	});		
 }
 
 function getIndigoState(deviceIndex)
