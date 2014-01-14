@@ -323,7 +323,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 // Public Functions
 
 	this.logToConsole = function() {
-		console.log("\t***************** -- Device Details " + this.getCurrentTime() + " -- **************");
+		console.log("\t***************** -- Device Details " + getCurrentTime() + " -- **************");
 		console.log("\t\tTimestamp: " + _fingTimestamp);
 		console.log("\t\tMac: " + this.getMACAddress());
 		console.log("\t\tIP Address: " + this.getIPAddress());
