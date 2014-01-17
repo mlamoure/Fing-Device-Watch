@@ -106,19 +106,26 @@ function loadConfiguration(callback) {
 			}
 */			else if (data[i][0] == "UnknownDeviceNotificationAlert")
 			{
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added unknwon notification alert for email: " + data[i][2]);				
+
 				// since we support email only atm, this creates a array of notification emails to send.
 				notificationEmails[notificationEmails.length] = data[i][2];
 			}
 			else if (data[i][0] == "AWS_AccessKey_Id")
 			{
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added AWS Access Key: " + data[i][1]);				
+
 				configuration.setAWS_AccessKey(data[i][1]);
 			}
 			else if (data[i][0] == "AWS_Secret_Access_Key")
 			{
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added AWS Secret Access Key: " + data[i][1]);				
 				configuration.setAWS_SecretKey(data[i][1]);
 			}
 			else if (data[i][0] == "SNS_Topic")
 			{
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added SNS Topic: " + data[i][1]);				
+
 				configuration.addSNSTopic(data[i][1]);
 			}
 		}
