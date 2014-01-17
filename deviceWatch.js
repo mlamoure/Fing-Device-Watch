@@ -5,14 +5,15 @@ var util  = require('util'),
 	csv = require('csv'),
 	moment = require('moment'),
 	NetworkDevice = require("./networkDevice.js"),
-	IndigoConfiguration = require("./indigoConfiguration.js"),
+	Configuration = require("./configuration.js"),
+	configuration,
 	networkDevices = new Array(),
 	notificationEmails,
+	snsTopics,
 	fingCommand_netmask,
 	dateformat = "YYYY/MM/DD HH:mm:ss",
 	fingCommand,
 	debug = false,
-	indigoConfiguration,
 	convert_min_to_ms = 60 * 1000;
 
 
@@ -38,9 +39,10 @@ loadConfiguration(function() {
 */
 function loadConfiguration(callback) {
 	fingCommand_netmask = "";
-	indigoConfiguration = new IndigoConfiguration();
+	configuration = new Configuration();
 	debug = false;
 	notificationEmails = new Array();
+	snsTopics = new Array();
 
 	clearAlertDevices();
 	clearWhiteListDevices();
@@ -77,11 +79,11 @@ function loadConfiguration(callback) {
 			}
 */			else if (data[i][0] == "Indigo_UserName")
 			{
-				indigoConfiguration.setIndigoUserName(data[i][1]);
+				configuration.setIndigoUserName(data[i][1]);
 			}
 			else if (data[i][0] == "Indigo_Password")
 			{
-				indigoConfiguration.setIndigoPassword(data[i][1]);
+				configuration.setIndigoPassword(data[i][1]);
 			}
 			else if (data[i][0] == "Debug")
 			{
@@ -90,10 +92,10 @@ function loadConfiguration(callback) {
 			}
 			else if (data[i][0] == "Indigo_Scan_Interval")
 			{
-				indigoConfiguration.setIndigoVariableRefreshRate(data[i][1])
+				configuration.setIndigoVariableRefreshRate(data[i][1])
 
 				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Indigo Scan Interval set to: " + indigoConfiguration.getIndigoVariableRefreshRate());				
+				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Indigo Scan Interval set to: " + configuration.getIndigoVariableRefreshRate());				
 			}
 /*			else if (data[i][0] == "Device_Scan_Interval")
 			{
@@ -106,6 +108,18 @@ function loadConfiguration(callback) {
 			{
 				// since we support email only atm, this creates a array of notification emails to send.
 				notificationEmails[notificationEmails.length] = data[i][2];
+			}
+			else if (data[i][0] == "AWS_AccessKey_Id")
+			{
+				configuration.setAWS_AccessKey(data[i][1]);
+			}
+			else if (data[i][0] == "AWS_Secret_Access_Key")
+			{
+				configuration.setAWS_SecretKey(data[i][1]);
+			}
+			else if (data[i][0] == "SNS_Topic")
+			{
+				configuration.addSNSTopic(data[i][1]);
 			}
 		}
 	})
@@ -120,7 +134,7 @@ function loadConfiguration(callback) {
 function reAssignConfiguration() {
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
 	{
-		networkDevices[deviceCounter].setIndigoConfiguration(indigoConfiguration);
+		networkDevices[deviceCounter].setConfiguration(configuration);
 	}	
 }
 
@@ -228,8 +242,8 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 	if (typeof(newNetworkDevice) === 'undefined') {
 		newRecord = true;
 		newNetworkDevice = new NetworkDevice(mac, ip, fqdn, manufacturer);
-		newNetworkDevice.setIndigoConfiguration(indigoConfiguration);
-		newNetworkDevice.setAlertEmailList(notificationEmails);		
+		newNetworkDevice.setConfiguration(configuration);
+		newNetworkDevice.setAlertEmailList(notificationEmails);
 		newNetworkDevice.setDeviceState(state);
 	}
 
@@ -237,7 +251,7 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 	{
 		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE " + mac + " / " + newNetworkDevice.getMACAddress() + " -- **************");
 
-		newNetworkDevice.setIndigoConfiguration(indigoConfiguration);
+		newNetworkDevice.setConfiguration(configuration);
 		newNetworkDevice.setAlertEmailList(notificationEmails);		
 		if (typeof(ip) !== 'undefined') newNetworkDevice.setIPAddress(ip);
 		if (typeof(state) !== 'undefined') newNetworkDevice.setDeviceState(state);
