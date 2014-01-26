@@ -141,7 +141,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this._prepare_SNS_Message = function() {
-		var object = { mac: this.getMACAddress(), state: this.getDeviceState() };
+		var object = { mac: this.getMACAddress(), state: this.getDeviceState(), timestamp: this._getCurrentTime() };
 		var json = JSON.stringify(object);
 
 		return json;

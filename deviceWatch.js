@@ -16,20 +16,21 @@ var util  = require('util'),
 	debug = false,
 	convert_min_to_ms = 60 * 1000;
 
+function main() {
+	/* THIS IS THE START OF THE APP */
+	loadConfiguration(function() {
+		runFing();
 
-/* THIS IS THE START OF THE APP */
-loadConfiguration(function() {
-	runFing();
+		fs.watchFile('devicewatch.conf', function (event, filename) {
+			console.log("** (" + getCurrentTime() + ") RELOADING CONFIGURATION");
 
-	fs.watchFile('devicewatch.conf', function (event, filename) {
-		console.log("** (" + getCurrentTime() + ") RELOADING CONFIGURATION");
-
-		loadConfiguration(function() {
-			reAssignConfiguration();
+			loadConfiguration(function() {
+				reAssignConfiguration();
+			});
 		});
-	});
 
-});
+	});
+}
 
 /*
 	Function: loadConfiguration(callback)
@@ -280,3 +281,5 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 function getCurrentTime() {
 	return moment().format(dateformat);
 }
+
+main();
