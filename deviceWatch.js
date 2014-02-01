@@ -19,7 +19,7 @@ function main() {
 	loadConfiguration(function() {
 		runFing();
 
-		fs.watchFile('devicewatch.conf', function (event, filename) {
+		fs.watchFile(path.join(__dirname + '/configuration.json'), function (event, filename) {
 			console.log("** (" + getCurrentTime() + ") RELOADING CONFIGURATION");
 
 			loadConfiguration(function() {
