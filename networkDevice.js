@@ -50,7 +50,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_alertEmailList;
 
 	this._getCurrentTime = function () {
-		return (moment().format(_dateformat));
+		return (_moment().format(_dateformat));
 	}
 
 	this.getMACAddress = function () {
@@ -354,7 +354,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		console.log("** (" + this._getCurrentTime() + ") " + alertText);
 		for (var i=0; i < emails.length; i++)
 		{
-		    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + emails[i], function(error, stdout, stderr)
+		    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + emails[i].address, function(error, stdout, stderr)
 		    	{
 		    		console.log(stdout); 
 		    	});
@@ -498,6 +498,12 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 	this._alertDevice = function() {
 		if (!this.isAlertDevice()) return;
+
+		if (!_configuration.publishEnabled()) {
+			console.log("** (" + _self._getCurrentTime() + ") Not going to publish (see configuration) ");
+
+			return;
+		}
 
 		if (typeof _configuration !== 'undefined')
 		{

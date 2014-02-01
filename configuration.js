@@ -10,12 +10,26 @@ function Configuration () {
 	var _aws_accessKey;
 	var _aws_secretKey;
 	var _sns_topicARN = new Array();
+	var _fakePublish;
+
+	this.publishEnabled = function () {
+		return (!_fakePublish);
+	}
+
+	this.setFakePublish = function(fakePublish) {
+		_fakePublish = fakePublish;
+	}
 
 	this.setCredentials = function(indigoUserName, indigoPassword) {
 		_indigoUserName = indigoUserName;
 		_indigoPassword = indigoPassword;
 		if (typeof _indigoPassword === 'undefined') _isPasswordProtected = false;
 		else _isPasswordProtected = _indigoPassword.length > 0;		
+	}
+
+	this.setPasswordProtectFlag = function(isPasswordProtected)
+	{
+		_isPasswordProtected = isPasswordProtected;
 	}
 
 	this.addSNSTopic = function (topicARN)

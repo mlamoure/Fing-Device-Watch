@@ -1,20 +1,18 @@
-var util  = require('util'),
-    spawn = require('child_process').spawn,
-    exec = require('child_process').exec,
-	fs = require('fs'),
-	csv = require('csv'),
-	moment = require('moment'),
-	NetworkDevice = require("./networkDevice.js"),
-	Configuration = require("./configuration.js"),
-	configuration,
-	networkDevices = new Array(),
-	notificationEmails,
-	snsTopics,
-	fingCommand_netmask,
-	dateformat = "YYYY/MM/DD HH:mm:ss",
-	fingCommand,
-	debug = false,
-	convert_min_to_ms = 60 * 1000;
+var util  = require('util');
+var spawn = require('child_process').spawn;
+var exec = require('child_process').exec;
+var path = require('path');
+var fs = require('fs');
+var moment = require('moment');
+var NetworkDevice = require("./networkDevice.js");
+var Configuration = require("./configuration.js");
+var deviceWatchConfiguration;
+var networkDevices = new Array();
+var dateformat = "YYYY/MM/DD HH:mm:ss";
+var fingCommand;
+var debug = false;
+var configurationFileData;
+var convert_min_to_ms = 60 * 1000;
 
 function main() {
 	/* THIS IS THE START OF THE APP */
@@ -32,119 +30,6 @@ function main() {
 	});
 }
 
-/*
-	Function: loadConfiguration(callback)
-
-	Parameters:
-		callback = the Callback function that this function calls if configuration is sucessfull.  If it is not sucessful, nothing is called, however an error is placed to the console
-*/
-function loadConfiguration(callback) {
-	fingCommand_netmask = "";
-	configuration = new Configuration();
-	debug = false;
-	notificationEmails = new Array();
-	snsTopics = new Array();
-
-	clearAlertDevices();
-	clearWhiteListDevices();
-
-	csv()
-	.from.path(__dirname+'/devicewatch.conf', { delimiter: ',', comment: '#', ltrim: 'true', rtrim: 'true' })
-	.to.array( function(data, count) {
-		for (var i = 0; i < count; i++)
-		{
-			// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
-			console.log("** (" + getCurrentTime() + ") CONFIGURATION: About to process: " + data[i]);
-
-			if (data[i][0] == "AlertDevice")
-			{
-				newNetworkDevice = processDevice(data[i][2], undefined, undefined, undefined, undefined);
-				newNetworkDevice.setAlertDevice(data[i][1], data[i][3], data[i][4], data[i][5])
-			}
-			else if (data[i][0] == "WhiteListDevice")
-			{
-				newNetworkDevice = processDevice(data[i][2], undefined, undefined, undefined, undefined);
-				newNetworkDevice.setWhiteListDevice(data[i][1])
-			}
-			else if (data[i][0] == "Netmask")
-			{
-				fingCommand_netmask = data[i][1];
-
-				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
-			}
-/*			else if (data[i][0] == "Indigo_Password_Protect")
-			{
-				if (data[i][1] == "true") indigo_Password_Protect = true;
-				else indigo_Password_Protect = false;
-			}
-*/			else if (data[i][0] == "Indigo_UserName")
-			{
-				configuration.setIndigoUserName(data[i][1]);
-			}
-			else if (data[i][0] == "Indigo_Password")
-			{
-				configuration.setIndigoPassword(data[i][1]);
-			}
-			else if (data[i][0] == "Debug")
-			{
-				if (data[i][1] == "true") debug = true;
-				else debug = false;
-			}
-			else if (data[i][0] == "Indigo_Scan_Interval")
-			{
-				configuration.setIndigoVariableRefreshRate(data[i][1])
-
-				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Indigo Scan Interval set to: " + configuration.getIndigoVariableRefreshRate());				
-			}
-/*			else if (data[i][0] == "Device_Scan_Interval")
-			{
-				device_scan_interval = data[i][1] * convert_min_to_ms;
-
-				// Do not wrap this in a if (debug) since the debug configuration may not have been read and set yet.
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Device Scan Interval set to: " + device_scan_interval);				
-			}
-*/			else if (data[i][0] == "UnknownDeviceNotificationAlert")
-			{
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added unknwon notification alert for email: " + data[i][2]);				
-
-				// since we support email only atm, this creates a array of notification emails to send.
-				notificationEmails[notificationEmails.length] = data[i][2];
-			}
-			else if (data[i][0] == "AWS_AccessKey_Id")
-			{
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added AWS Access Key: " + data[i][1]);				
-
-				configuration.setAWS_AccessKey(data[i][1]);
-			}
-			else if (data[i][0] == "AWS_Secret_Access_Key")
-			{
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added AWS Secret Access Key: " + data[i][1]);				
-				configuration.setAWS_SecretKey(data[i][1]);
-			}
-			else if (data[i][0] == "SNS_Topic")
-			{
-				console.log("** (" + getCurrentTime() + ") CONFIGURATION: Added SNS Topic: " + data[i][1]);				
-
-				configuration.addSNSTopic(data[i][1]);
-			}
-		}
-	})
-	.on('end', function(count){
-		if (callback != null) callback();
-	})
-	.on('error', function(error){
-	  console.log("** (" + getCurrentTime() + ") Something is wrong with your config file: " + error.message);
-	});
-}
-
-function reAssignConfiguration() {
-	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
-	{
-		networkDevices[deviceCounter].setConfiguration(configuration);
-	}	
-}
 
 function clearAlertDevices() {
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
@@ -158,6 +43,68 @@ function clearWhiteListDevices() {
 	{
 		networkDevices[deviceCounter].clearWhiteListDevice();
 	}
+}
+
+/*
+	Function: loadConfiguration(callback)
+
+	Parameters:
+		callback = the Callback function that this function calls if configuration is sucessfull.  If it is not sucessful, nothing is called, however an error is placed to the console
+*/
+function loadConfiguration(callback) {
+	clearAlertDevices();
+	clearWhiteListDevices();
+
+	deviceWatchConfiguration = new Configuration();
+
+	fs.readFile(path.join(__dirname + '/configuration.json'), 'utf8', function (err, data) {
+		if (err) {
+			console.log("** (" + getCurrentTime() + ") ERROR LOADING CONFIGURATION: " + err);
+			return;
+		}
+
+		configurationFileData = JSON.parse(data);
+
+		for (var recordNum in configurationFileData.AlertDevices) {
+			newNetworkDevice = processDevice(configurationFileData.AlertDevices[recordNum].mac, 
+				undefined, undefined, undefined, undefined);
+
+			newNetworkDevice.setAlertDevice(
+				configurationFileData.AlertDevices[recordNum].name,
+				configurationFileData.AlertDevices[recordNum].alertMethods[0].method,
+				configurationFileData.AlertDevices[recordNum].alertMethods[0].indigoVariableEndpoint,
+				configurationFileData.AlertDevices[recordNum].alertMethods[0].ttl)
+		}
+
+		for (var recordNum in configurationFileData.WhiteListDevices) {
+			newNetworkDevice = processDevice(configurationFileData.WhiteListDevices[recordNum].mac, 
+				undefined, undefined, undefined, undefined);
+
+			newNetworkDevice.setWhiteListDevice(configurationFileData.WhiteListDevices[recordNum].name)
+		}
+
+		fingCommand_netmask = configurationFileData.FingConfiguration.netmask;
+		console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
+
+		deviceWatchConfiguration.setIndigoUserName(configurationFileData.IndigoConfiguration.username);
+		deviceWatchConfiguration.setIndigoPassword(configurationFileData.IndigoConfiguration.password);
+		deviceWatchConfiguration.setPasswordProtectFlag(configurationFileData.IndigoConfiguration.passwordProtect);
+		deviceWatchConfiguration.setIndigoVariableRefreshRate(configurationFileData.IndigoConfiguration.scanInterval)
+		deviceWatchConfiguration.setAWS_AccessKey(configurationFileData.AWS.accessKeyId);
+		deviceWatchConfiguration.setAWS_SecretKey(configurationFileData.AWS.secretAccessKey);
+		deviceWatchConfiguration.addSNSTopic(configurationFileData.AWSTopicARN);
+		deviceWatchConfiguration.setFakePublish(configurationFileData.FakePublish);
+
+		if (configurationFileData.Debug == "true") debug = true;
+		else debug = false;
+	});
+}
+
+function reAssignConfiguration() {
+	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
+	{
+		networkDevices[deviceCounter].setConfiguration(configuration);
+	}	
 }
 
 /*
@@ -250,8 +197,8 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 	if (typeof(newNetworkDevice) === 'undefined') {
 		newRecord = true;
 		newNetworkDevice = new NetworkDevice(mac, ip, fqdn, manufacturer);
-		newNetworkDevice.setConfiguration(configuration);
-		newNetworkDevice.setAlertEmailList(notificationEmails);
+		newNetworkDevice.setConfiguration(deviceWatchConfiguration);
+		newNetworkDevice.setAlertEmailList(configurationFileData.UnknownDeviceNotification);
 		newNetworkDevice.setDeviceState(state);
 	}
 

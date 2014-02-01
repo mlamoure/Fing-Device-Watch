@@ -1,0 +1,77 @@
+{
+	"AWS": {
+		"defaultRegion": "us-east-1",
+		"accessKeyId": "",
+		"secretAccessKey": ""
+	},
+
+	"FakePublish": false,
+
+	"AWSTopicARN": "",
+
+	"FingConfiguration" : 
+	{
+		"netmask": "192.168.1.1/24"
+	},
+
+	"IndigoConfiguration" :
+	{
+		"scanInterval": 5,
+		"passwordProtect": false,
+		"username": "username",
+		"password": "password"
+	},
+
+	"NonWhiteListedDeviceWarnInterval": 24,
+
+	"Debug": false,
+
+	"UnknownDeviceNotification" : [
+		{
+			"mode": "email",
+			"address:": "email@host"
+		}
+	],
+
+	"AlertDevices": [
+		{
+			"name": "Device1",
+			"mac": "xx:xx:xx:xx:xx:xx",
+			"alertMethods": [
+				{
+					"method": "indigo",
+					"indigoVariableEndpoint": "http://ip:port/variables/variable",
+					"ttl": 5
+				},
+				{
+					"method": "sns"
+				}
+			]
+		},
+		{
+			"name": "Device2",
+			"mac": "xx:xx:xx:xx:xx:xx",
+			"alertMethods": [
+				{
+					"method": "indigo",
+					"indigoVariableEndpoint": "http://ip:port/variables/variable",
+					"ttl": 5
+				},
+				{
+					"method": "sns"
+				}
+			]
+		}
+	],
+
+	"WhiteListDevices": [
+		{
+			"name": "Device3",
+			"mac": "xx:xx:xx:xx:xx:xx"			
+		},
+		{
+			"name": "Device4",
+			"mac": "xx:xx:xx:xx:xx:xx"			
+		}
+	]
+}
