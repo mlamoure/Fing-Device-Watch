@@ -265,6 +265,11 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this._scheduleWhiteListCheck = function(addMinutes) {
+		if (_whiteListCheckJob !== 'undefined') {
+			_whiteListCheckJob.cancel();
+			_whiteListCheckJob = undefined;
+		}
+
 		// Add two minutes to the current time.
 		var recheckWhiteListStatus = _moment().add('m', addMinutes).format(_dateformat);
 
@@ -274,8 +279,10 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			// White List Device Stuff
 			if (_self._isReadyforWhiteListAlert())
 			{
-				_self._reportUnknownDevice(alertEmailList);
+				_self._reportUnknownDevice(_alertEmailList);
 			}
+
+			_whiteListCheckJob = undefined;
 		});
 	}
 
