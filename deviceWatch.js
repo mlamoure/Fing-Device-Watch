@@ -1,8 +1,9 @@
 var util  = require('util');
 var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
-var path = require('path');
 var fs = require('fs');
+var path = require('path');
+var csv = require('csv');
 var moment = require('moment');
 var NetworkDevice = require("./networkDevice.js");
 var Configuration = require("./configuration.js");
@@ -12,22 +13,46 @@ var dateformat = "YYYY/MM/DD HH:mm:ss";
 var fingCommand;
 var debug = false;
 var configurationFileData;
+var nonWhiteListedDeviceWarnInterval;
+var nonWhiteListedDeviceWarnIntervalID;
+var configFileIncPath = path.join(__dirname + '/configuration.json');
 var convert_min_to_ms = 60 * 1000;
 
 function main() {
 	/* THIS IS THE START OF THE APP */
 	loadConfiguration(function() {
-		runFing();
+		postConfiguration();
 
-		fs.watchFile(path.join(__dirname + '/configuration.json'), function (event, filename) {
+		fs.watchFile(configFileIncPath, function (event, filename) {
 			console.log("** (" + getCurrentTime() + ") RELOADING CONFIGURATION");
 
 			loadConfiguration(function() {
-				reAssignConfiguration();
+				postConfiguration();
 			});
 		});
 
 	});
+}
+
+function postConfiguration() {
+	if (typeof fingCommand !== 'undefined') {
+		fingCommand.stdin.pause();
+		fingCommand.kill();
+	}
+
+	if (typeof nonWhiteListedDeviceWarnIntervalID !== 'undefined')
+	{
+		clearInterval(nonWhiteListedDeviceWarnIntervalID);
+	}
+
+	assignConfiguration();
+
+	runFing();
+
+	nonWhiteListedDeviceWarnIntervalID = setInterval(function() {
+		clearUnknownDevicesReportedFlag();
+
+	}, nonWhiteListedDeviceWarnInterval * convert_min_to_ms * 60);	
 }
 
 
@@ -45,6 +70,16 @@ function clearWhiteListDevices() {
 	}
 }
 
+function clearUnknownDevicesReportedFlag() {
+	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
+	{
+		if (!networkDevices[deviceCounter].isWhiteListedDevice())
+		{
+			networkDevices[deviceCounter].clearUnknownDeviceReportedFlag();
+		}
+	}
+}
+
 /*
 	Function: loadConfiguration(callback)
 
@@ -57,7 +92,7 @@ function loadConfiguration(callback) {
 
 	deviceWatchConfiguration = new Configuration();
 
-	fs.readFile(path.join(__dirname + '/configuration.json'), 'utf8', function (err, data) {
+	fs.readFile(configFileIncPath, 'utf8', function (err, data) {
 		if (err) {
 			console.log("** (" + getCurrentTime() + ") ERROR LOADING CONFIGURATION: " + err);
 			return;
@@ -84,6 +119,8 @@ function loadConfiguration(callback) {
 		}
 
 		fingCommand_netmask = configurationFileData.FingConfiguration.netmask;
+		nonWhiteListedDeviceWarnInterval = configurationFileData.FingConfiguration.NonWhiteListedDeviceWarnInterval;
+
 		console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
 
 		deviceWatchConfiguration.setIndigoUserName(configurationFileData.IndigoConfiguration.username);
@@ -97,13 +134,17 @@ function loadConfiguration(callback) {
 
 		if (configurationFileData.Debug == "true") debug = true;
 		else debug = false;
+
+		if (callback != null) callback();		
 	});
 }
 
-function reAssignConfiguration() {
+function assignConfiguration() {
+	if (typeof deviceWatchConfiguration === 'undefined') return;
+
 	for (var deviceCounter=0; deviceCounter<networkDevices.length; deviceCounter++)
 	{
-		networkDevices[deviceCounter].setConfiguration(configuration);
+		networkDevices[deviceCounter].setConfiguration(deviceWatchConfiguration);
 	}	
 }
 
@@ -150,8 +191,12 @@ function runFing()
 	});
 
 	fingCommand.on('close', function (code) {
-	  console.log('child process exited with code ' + code);
-	});	
+		console.log("** (" + getCurrentTime() + ") Fing process was closed and gave response: " + code);
+	});
+
+	fingCommand.on('error', function (err) {
+		console.log("** (" + getCurrentTime() + ") Fing process gave error: " + err);
+	})
 }
 
 function parseFingOutput(data) {
@@ -206,8 +251,8 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 	{
 		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE " + mac + " / " + newNetworkDevice.getMACAddress() + " -- **************");
 
-		newNetworkDevice.setConfiguration(configuration);
-		newNetworkDevice.setAlertEmailList(notificationEmails);		
+		newNetworkDevice.setConfiguration(deviceWatchConfiguration);
+		newNetworkDevice.setAlertEmailList(configurationFileData.UnknownDeviceNotification);		
 		if (typeof(ip) !== 'undefined') newNetworkDevice.setIPAddress(ip);
 		if (typeof(state) !== 'undefined') newNetworkDevice.setDeviceState(state);
 		if (typeof(fqdn) !== 'undefined') newNetworkDevice.setFQDN(fqdn);

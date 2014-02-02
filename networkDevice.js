@@ -197,6 +197,12 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		return _whiteListed;
 	}
 
+	this.clearUnknownDeviceReportedFlag = function () {
+		_unknownDeviceReported = false;
+
+		this._scheduleWhiteListCheck(10);
+	}
+
 // **************************************************************************
 // Alert Functions
 
@@ -262,16 +268,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		// Add two minutes to the current time.
 		var recheckWhiteListStatus = _moment().add('m', addMinutes).format(_dateformat);
 
-		recheckWhiteListStatusDate = new Date(
-			_moment(recheckWhiteListStatus, _dateformat).year(), 
-			_moment(recheckWhiteListStatus, _dateformat).month(), 
-			_moment(recheckWhiteListStatus, _dateformat).date(), 
-			_moment(recheckWhiteListStatus, _dateformat).hour(), 
-			_moment(recheckWhiteListStatus, _dateformat).minute(), 
-			_moment(recheckWhiteListStatus, _dateformat).seconds()
-		);
-
-		_whiteListCheckJob = _schedule.scheduleJob(recheckWhiteListStatusDate, function() {
+		_whiteListCheckJob = _schedule.scheduleJob(recheckWhiteListStatus, function() {
 			console.log("** (" + _self._getCurrentTime() + ") Checking (via Scheduled) whitelist status for " + _self.getMACAddress());
 
 			// White List Device Stuff
