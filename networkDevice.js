@@ -265,7 +265,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this._scheduleWhiteListCheck = function(addMinutes) {
-		if (_whiteListCheckJob !== 'undefined') {
+		if (typeof _whiteListCheckJob !== 'undefined') {
 			_whiteListCheckJob.cancel();
 			_whiteListCheckJob = undefined;
 		}
@@ -476,6 +476,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				
 				_indigoState = newIndigoValue;
 				_indigoStateTimestamp = _self._getCurrentTime();
+			})
 			.on('error', function(error){
 				console.log("** (" + _self._getCurrentTime() + ") Error getting results from Indigo: " + error.message);
 			});				
