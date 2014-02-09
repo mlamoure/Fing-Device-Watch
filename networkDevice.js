@@ -179,9 +179,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			});
 
 			_AWS_SNS = new _aws.SNS().client;
-		}
-		
-		this._scheduleIndigoVariableRefresh();
+		}		
 	}
 
 // **************************************************************************
