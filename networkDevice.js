@@ -546,8 +546,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return;
 		}
 
-		for (counter = 0; counter < _alertMethods.length; counter++) {
-			if (_alertMethods[counter].method == "indigo")
+		for (var recordNum in _alertMethods) {
+			if (_alertMethods[recordNum].method == "indigo")
 			{
 				var setValue;
 
@@ -564,20 +564,20 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 				if (_configuration.isPasswordProtected())
 				{
-					_needle.put(_alertMethods[counter].indigoVariableEndpoint, setValue, { username: _configuration.getIndigoUserName(), password: _configuration.getIndigoPassword(), auth: 'digest' }, function() {
+					_needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, { username: _configuration.getIndigoUserName(), password: _configuration.getIndigoPassword(), auth: 'digest' }, function() {
 						//
 					})
 				}
 				else
 				{
-					_needle.put(_alertMethods[counter].indigoVariableEndpoint, setValue, function() {
+					_needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, function() {
 						//
 					})
 				}
 			}
-			else if (_alertMethods[counter].method == "sns")
+			else if (_alertMethods[recordNum].method == "sns")
 			{
-				this._publish_sns(this._prepare_SNS_Message(), _alertMethods[counter]);
+				this._publish_sns(this._prepare_SNS_Message(), _alertMethods[recordNum]);
 			}
 		}
 
