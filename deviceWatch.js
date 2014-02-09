@@ -106,9 +106,10 @@ function loadConfiguration(callback) {
 
 			newNetworkDevice.setAlertDevice(
 				configurationFileData.AlertDevices[recordNum].name,
-				configurationFileData.AlertDevices[recordNum].alertMethods[0].method,
-				configurationFileData.AlertDevices[recordNum].alertMethods[0].indigoVariableEndpoint,
-				configurationFileData.AlertDevices[recordNum].alertMethods[0].ttl)
+				configurationFileData.AlertDevices[recordNum].ttl)
+
+			newNetworkDevice.setAlertMethods(
+				configurationFileData.AlertDevices[recordNum].alertMethods)
 		}
 
 		for (var recordNum in configurationFileData.WhiteListDevices) {
@@ -129,8 +130,8 @@ function loadConfiguration(callback) {
 		deviceWatchConfiguration.setIndigoVariableRefreshRate(configurationFileData.IndigoConfiguration.scanInterval)
 		deviceWatchConfiguration.setAWS_AccessKey(configurationFileData.AWS.accessKeyId);
 		deviceWatchConfiguration.setAWS_SecretKey(configurationFileData.AWS.secretAccessKey);
-		deviceWatchConfiguration.addSNSTopic(configurationFileData.AWSTopicARN);
 		deviceWatchConfiguration.setFakePublish(configurationFileData.FakePublish);
+		deviceWatchConfiguration.setUnknownDeviceNotification(configurationFileData.UnknownDeviceNotification);
 
 		if (configurationFileData.Debug == "true") debug = true;
 		else debug = false;
@@ -243,7 +244,6 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 		newRecord = true;
 		newNetworkDevice = new NetworkDevice(mac, ip, fqdn, manufacturer);
 		newNetworkDevice.setConfiguration(deviceWatchConfiguration);
-		newNetworkDevice.setAlertEmailList(configurationFileData.UnknownDeviceNotification);
 		newNetworkDevice.setDeviceState(state);
 	}
 
@@ -252,7 +252,6 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE " + mac + " / " + newNetworkDevice.getMACAddress() + " -- **************");
 
 		newNetworkDevice.setConfiguration(deviceWatchConfiguration);
-		newNetworkDevice.setAlertEmailList(configurationFileData.UnknownDeviceNotification);		
 		if (typeof(ip) !== 'undefined') newNetworkDevice.setIPAddress(ip);
 		if (typeof(state) !== 'undefined') newNetworkDevice.setDeviceState(state);
 		if (typeof(fqdn) !== 'undefined') newNetworkDevice.setFQDN(fqdn);

@@ -42,12 +42,13 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_needle = require('needle'),
 		_mac = mac || 'none',
 		_state,
-		_previousState,
+		_syncState,
+		_syncStateTimestamp,		
 		_ip = ip || 'none',
 		_manufacturer,
 		_fingTimestamp,
 		_fqdn = fqdn || 'none',
-		_alertEmailList;
+		_alertMethods;
 
 	this._getCurrentTime = function () {
 		return (_moment().format(_dateformat));
@@ -97,6 +98,10 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_mac = mac;
 	}
 
+	this.getIndigoState = function() {
+		return this._syncState;
+	}
+
 	this.setIPAddress = function(ip) {
 		_ip = ip;
 	}
@@ -131,7 +136,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		// White List Device Stuff
 		if (this._isReadyforWhiteListAlert())
 		{
-			this._reportUnknownDevice(_alertEmailList);
+			this._reportUnknownDevice();
 		}
 
 		if (this._isReadyforAlert())
@@ -159,17 +164,12 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_manufacturer = manufacturer;
 	}
 
-	this.setAlertEmailList = function (alertEmailList)
-	{
-		_alertEmailList = alertEmailList;
-	}
-
 	this.setConfiguration = function (configuration) {
 		if (typeof _configuration === 'undefined') console.log("** (" + this._getCurrentTime() + ") Configuration for " + this.getMACAddress() + " is being set");
 
 		_configuration = configuration;
 
-		if (_configuration.isSNSEnabled())
+		if (_configuration.isAWSEnabled())
 		{
 			// configure AWS 
 			_aws.config.update({
@@ -214,8 +214,6 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_alertOffNetworkTTL,
 		_scheduledAlertDate,
 		_scheduledAlertJob,
-		_indigoState,
-		_indigoStateTimestamp,
 		_scheduledIndigoRefresh = false,
 		_scheduledIndigoRefreshIntervalID;
 
@@ -230,11 +228,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this.isAlertDevice = function () {
-		return _alertDevice;
-	}
-
-	this.getIndigoState = function () {
-		return _indigoState;
+		return _alertDevice && _alertMethods.length > 0;
 	}
 
 
@@ -279,7 +273,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			// White List Device Stuff
 			if (_self._isReadyforWhiteListAlert())
 			{
-				_self._reportUnknownDevice(_alertEmailList);
+				_self._reportUnknownDevice();
 			}
 
 			_whiteListCheckJob = undefined;
@@ -300,21 +294,32 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		}		
 	}
 
-	this.setAlertDevice = function (alertDeviceName, alertMode, alertModeVariable, alertOffNetworkTTL) {
-		_alertDevice = alertMode.length > 0;
+	this.setAlertMethods = function (alertMethods) {
+		_alertMethods = alertMethods;
+
+		for (var recordNum in _alertMethods)
+		{
+			if (_alertMethods[recordNum].method == "indigo" )
+			{
+				this._refreshIndigoState(_alertMethods[recordNum]);
+				this._scheduleIndigoVariableRefresh(_alertMethods[recordNum]);
+			}
+			else if(alertMethods[recordNum].method == "sns")
+			{
+
+			}
+		}
+	}
+
+	this.setAlertDevice = function (alertDeviceName, alertOffNetworkTTL) {
+		_alertDevice = alertOffNetworkTTL > 0;
 
 		this.setWhiteListDevice(alertDeviceName);
 
 		_alertDeviceName = alertDeviceName;
-		_alertMode = alertMode;
-		_alertIndigoVariableURL = alertModeVariable;
 		_alertOffNetworkTTL = alertOffNetworkTTL;
 
 		console.log("** (" + this._getCurrentTime() + ") Alert Device has been enabled for " + alertDeviceName);
-
-		this._refreshIndigoState();
-
-		this._scheduleIndigoVariableRefresh();
 	}
 
 	this.logToConsole = function() {
@@ -324,7 +329,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		console.log("\t\tIP Address: " + this.getIPAddress());
 		console.log("\t\tFQDN: " + this.getFQDN());
 		console.log("\t\tState: " + this.getDeviceState());
-		console.log("\t\tPrevious State: " + _previousState);
+		console.log("\t\tPrevious State: NOT ENABLED");
 		console.log("\t\tState Timestamp (fing): " + _fingTimestamp);
 
 		if (typeof _configuration !== 'undefined') console.log("\t\tConfiguration set: true");
@@ -340,28 +345,27 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		if (this.isWhiteListedDevice()) console.log("\t\tWhite List Device Name: " + _whiteListDeviceName);
 
 		console.log("\t\tScheduled Alert: " + _scheduledAlertDate);
-		if (this.isAlertDevice()) console.log("\t\tCached Indigo Value: " + this.getIndigoState());
-		if (this.isAlertDevice()) console.log("\t\tIndigo Value Timestamp: " + _indigoStateTimestamp);		
+		if (this.isAlertDevice()) console.log("\t\tSync'd Value: " + this.getIndigoState());
+		if (this.isAlertDevice()) console.log("\t\tSync Value Timestamp: " + _syncStateTimestamp);		
 		console.log("\t******************************************************");		
 	}
 
 // **************************************************************************
 // Private Functions
 
-	this._reportUnknownDevice = function(emails) {
+	this._reportUnknownDevice = function() {
 		// if it was already reported, let's quit
 		if (_unknownDeviceReported) return;
 
 		var alertText = "ALERT ** Found a device that is not cleared to be on the network: " + mac + " FQDN: " + fqdn;
 
-
 		console.log("** (" + this._getCurrentTime() + ") " + alertText);
-		for (var i=0; i < emails.length; i++)
-		{
-		    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + emails[i].address, function(error, stdout, stderr)
+
+		for (var recordNum in _configuration.getUnknownDeviceNotification()) {
+		    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + _configuration.getUnknownDeviceNotification()[recordNum].address, function(error, stdout, stderr)
 		    	{
 		    		console.log(stdout); 
-		    	});
+		    	});			
 		}
 
 		_unknownDeviceReported = true;
@@ -399,7 +403,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		}
 	}
 
-	this._scheduleIndigoVariableRefresh = function () {
+	this._scheduleIndigoVariableRefresh = function (alertMethod) {
 		if (typeof _scheduledIndigoRefreshIntervalID !== 'undefined')
 		{
 			return;
@@ -415,7 +419,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				_scheduledIndigoRefresh = true;
 
 				_scheduledIndigoRefreshIntervalID = setInterval(function() {
-					_self._refreshIndigoState();
+					_self._refreshIndigoState(alertMethod);
 		        }, _configuration.getIndigoVariableRefreshRate());			
 			}
 		}
@@ -427,45 +431,71 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return false;
 		}
 
-		if (typeof this.getIndigoState() === 'undefined') {
-			this._refreshIndigoState();
+		for (recordNum in _alertMethods) {
+			if (_alertMethods[recordNum].method == "indigo") {
+				if (typeof this.getIndigoState() === 'undefined') {
+					this._refreshIndigoState(_alertMethods[recordNum]);
 
-			console.log("** (" + this._getCurrentTime() + ") No current state is known about the Indigo value of " + this.getAlertDeviceName() + ", current state from fing is " + this.getDeviceState());
+					console.log("** (" + this._getCurrentTime() + ") No current state is known about the Indigo value of " + this.getAlertDeviceName() + ", current state from fing is " + this.getDeviceState());
 
-			this._scheduleAlert(1);
+					this._scheduleAlert(1);
 
-			return false;
+					return false;
+				}
+
+				console.log("** (" + this._getCurrentTime() + ") Cached Indigo value of " + this.getAlertDeviceName() + " is: " + this.getIndigoState() + ", current state from fing is " + this.getDeviceState());
+
+				if (!this.getIndigoState() && this.getDeviceState())
+				{
+					console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName() + " since Indigo state is false and the device is online");
+
+					return true;
+				}
+				else if (this.getDeviceState() == this.getIndigoState())
+				{
+					console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because Indigo is already set appropriately");
+					return false;
+				}
+				else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
+					console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
+					
+					this._scheduleAlert(_alertOffNetworkTTL);
+
+					return false;
+				}
+
+				console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName());
+				return true;
+			}
+			else if (_alertMethods[recordNum].method == "sns") {
+				if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
+					console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
+					
+					this._scheduleAlert(_alertOffNetworkTTL);
+
+					return false;
+				}
+
+				return true;				
+			}
 		}
 
-		console.log("** (" + this._getCurrentTime() + ") Cached Indigo value of " + this.getAlertDeviceName() + " is: " + this.getIndigoState() + ", current state from fing is " + this.getDeviceState());
-
-		if (!this.getIndigoState() && this.getDeviceState())
-		{
-			console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName() + " since Indigo state is false and the device is online");
-
-			return true;
-		}
-		else if (this.getDeviceState() == this.getIndigoState())
-		{
-			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because Indigo is already set appropriately");
-			return false;
-		}
-		else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
-			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
-			
-			this._scheduleAlert(_alertOffNetworkTTL);
-
-			return false;
-		}
-
-		console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName());
-		return true;		
+		return false;
 	}
 
-	this._refreshIndigoState = function() {
+	this._refreshIndigoState = function(alertMethod) {
 		var newIndigoValue = false;
 
-		_needle.get(_alertIndigoVariableURL + ".txt", function(err, resp, body) {
+		if (typeof(alertMethod) === 'undefined') {
+			throw new Error("need a alertMethod passed in order to refresh Indigo.") 
+			return;
+		}
+		if (alertMethod.method != 'indigo') {
+			console.log("** (" + _self._getCurrentTime() + ") Odd, I should not be here since the alert method is not set to indigo.");
+			return;
+		}
+
+		_needle.get(alertMethod.indigoVariableEndpoint + ".txt", function(err, resp, body) {
 			_csv()
 			.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
 			.to.array( function(data, count) {
@@ -474,8 +504,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				
 				console.log("** (" + _self._getCurrentTime() + ") Obtained and saved the current value of indigo variable for " + _self.getAlertDeviceName() + " is: " + newIndigoValue);
 				
-				_indigoState = newIndigoValue;
-				_indigoStateTimestamp = _self._getCurrentTime();
+				_syncState = newIndigoValue;
+				_syncStateTimestamp = _self._getCurrentTime();
 			})
 			.on('error', function(error){
 				console.log("** (" + _self._getCurrentTime() + ") Error getting results from Indigo: " + error.message);
@@ -483,13 +513,14 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		});		
 	}
 
-	this._publish_sns = function(message) {
+	this._publish_sns = function(message, alertMethod) {
 		console.log("** (" + this._getCurrentTime() + ") About to publish a SNS message for device " + this.getAlertDeviceName() + " message: " + message);
 
-		if (!_configuration.isSNSEnabled()) return;
+		if (!_configuration.isAWSEnabled()) return;
+		if (typeof(alertMethod.AWSTopicARN) === 'undefined') return;
 
 		_AWS_SNS.publish({
-		    'TopicArn': _configuration.getSNSTopics()[0],
+		    'TopicArn': alertMethod.AWSTopicARN,
 		    'Message': message,
 		}, function (err, result) {
 		 
@@ -512,41 +543,48 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return;
 		}
 
-		if (typeof _configuration !== 'undefined')
+		if (typeof _configuration === 'undefined')
 		{
-			if (_previousState != this.getDeviceState())
+			return;
+		}
+
+		for (counter = 0; counter < _alertMethods.length; counter++) {
+			if (_alertMethods[counter].method == "indigo")
 			{
-				this._publish_sns(this._prepare_SNS_Message());			
-			}			
+				var setValue;
+
+				if (this.getDeviceState())
+				{
+					setValue = "value=true";
+				}
+				else
+				{
+					setValue = "value=false";
+				}
+
+				console.log("** (" + this._getCurrentTime() + ") ALERT ** Alert being sent for device - " + this.getAlertDeviceName() + ": State is " + setValue);
+
+				if (_configuration.isPasswordProtected())
+				{
+					_needle.put(_alertMethods[counter].indigoVariableEndpoint, setValue, { username: _configuration.getIndigoUserName(), password: _configuration.getIndigoPassword(), auth: 'digest' }, function() {
+						//
+					})
+				}
+				else
+				{
+					_needle.put(_alertMethods[counter].indigoVariableEndpoint, setValue, function() {
+						//
+					})
+				}
+			}
+			else if (_alertMethods[counter].method == "sns")
+			{
+				this._publish_sns(this._prepare_SNS_Message(), _alertMethods[counter]);
+			}
 		}
 
-		var setValue;
 
-		if (this.getDeviceState())
-		{
-			setValue = "value=true";
-		}
-		else
-		{
-			setValue = "value=false";
-		}
-
-		console.log("** (" + this._getCurrentTime() + ") ALERT ** Alert being sent for device - " + this.getAlertDeviceName() + ": State is " + setValue);
-
-		if (_configuration.isPasswordProtected())
-		{
-			_needle.put(_alertIndigoVariableURL, setValue, { username: _configuration.getIndigoUserName(), password: _configuration.getIndigoPassword(), auth: 'digest' }, function() {
-				//
-			})
-		}
-		else
-		{
-			_needle.put(_alertIndigoVariableURL, setValue, function() {
-				//
-			})
-		}
-
-		_indigoState = this.getDeviceState();
+		_syncState = this.getDeviceState();
 	}
 }
 

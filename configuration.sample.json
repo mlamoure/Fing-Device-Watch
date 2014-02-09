@@ -37,25 +37,26 @@
 		{
 			"name": "Device1",
 			"mac": "xx:xx:xx:xx:xx:xx",
+			"ttl": 5,
 			"alertMethods": [
 				{
 					"method": "indigo",
-					"indigoVariableEndpoint": "http://ip:port/variables/variable",
-					"ttl": 5
+					"indigoVariableEndpoint": "http://ip:port/variables/variable"
 				},
 				{
-					"method": "sns"
+					"method": "sns",
+					"AWSTopicARN": "arn:aws:sns:xxx"
 				}
 			]
 		},
 		{
 			"name": "Device2",
 			"mac": "xx:xx:xx:xx:xx:xx",
+			"ttl": 5,
 			"alertMethods": [
 				{
 					"method": "indigo",
-					"indigoVariableEndpoint": "http://ip:port/variables/variable",
-					"ttl": 5
+					"indigoVariableEndpoint": "http://ip:port/variables/variable"
 				},
 				{
 					"method": "sns"

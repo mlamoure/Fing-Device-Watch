@@ -9,8 +9,8 @@ function Configuration () {
 	var _sns = false;
 	var _aws_accessKey;
 	var _aws_secretKey;
-	var _sns_topicARN = new Array();
 	var _fakePublish;
+	var _unknownDeviceNotification;
 
 	this.publishEnabled = function () {
 		return (!_fakePublish);
@@ -30,15 +30,6 @@ function Configuration () {
 	this.setPasswordProtectFlag = function(isPasswordProtected)
 	{
 		_isPasswordProtected = isPasswordProtected;
-	}
-
-	this.addSNSTopic = function (topicARN)
-	{
-		_sns_topicARN[_sns_topicARN.length] = topicARN;
-	}
-
-	this.getSNSTopics = function() {
-		return _sns_topicARN;
 	}
 
 	this.setIndigoUserName = function(indigoUserName) {
@@ -73,10 +64,6 @@ function Configuration () {
 		return _variableRefreshRate;
 	}
 
-	this.isSNSEnabled = function() {
-		return (_aws && _sns_topicARN.length > 0)
-	}
-
 	this.setIndigoVariableRefreshRate = function(interval) {
 		_variableRefreshRate = interval * 60 * 1000;
 	}
@@ -91,11 +78,24 @@ function Configuration () {
 		this.setAmazonCredentials(_aws_accessKey, secretKey);
 	}
 
+	this.isAWSEnabled = function() {
+		return _aws;
+	}
+
+	this.getUnknownDeviceNotification = function() {
+		return _unknownDeviceNotification;
+	}
+
+	this.setUnknownDeviceNotification = function(unknownDeviceNotification) {
+		_unknownDeviceNotification = unknownDeviceNotification;
+	}
+
 	this.setAmazonCredentials = function(accessKey, secretKey) {
 		_aws_accessKey = accessKey;
 		_aws_secretKey = secretKey;
 		if (typeof _aws_secretKey === 'undefined') _aws = false;
-		else _aws = _aws_secretKey.length > 0;
+		else if (typeof _aws_accessKey === 'undefined') _aws = false;
+		else _aws = _aws_secretKey.length > 0 && _aws_accessKey.length > 0;
 	}
 }
 
