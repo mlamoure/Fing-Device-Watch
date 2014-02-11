@@ -360,10 +360,15 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		console.log("** (" + this._getCurrentTime() + ") " + alertText);
 
 		for (var recordNum in _configuration.getUnknownDeviceNotification()) {
-		    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + _configuration.getUnknownDeviceNotification()[recordNum].address, function(error, stdout, stderr)
-		    	{
-		    		console.log(stdout); 
-		    	});			
+			try {
+			    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + _configuration.getUnknownDeviceNotification()[recordNum].address, function(error, stdout, stderr)
+			    	{
+			    		console.log(stdout); 
+			    	});
+			}
+			catch (err) {
+				console.log("** (" + this._getCurrentTime() + ") ERROR: There was an ERROR when attempting to send out a network device alert: " + err);
+			}
 		}
 
 		_unknownDeviceReported = true;
