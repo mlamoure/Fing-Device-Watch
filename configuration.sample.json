@@ -59,7 +59,8 @@
 					"indigoVariableEndpoint": "http://ip:port/variables/variable"
 				},
 				{
-					"method": "sns"
+					"method": "sns",
+					"AWSTopicARN": "xxx"
 				}
 			]
 		}
