@@ -5,6 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var csv = require('csv');
 var moment = require('moment');
+var schedule = require('node-schedule');
 var NetworkDevice = require("./networkDevice.js");
 var Configuration = require("./configuration.js");
 var deviceWatchConfiguration;
@@ -19,6 +20,8 @@ var configFileIncPath = path.join(__dirname + '/configuration.json');
 var convert_min_to_ms = 60 * 1000;
 
 function main() {
+	fs.unwatchFile(configFileIncPath);
+
 	/* THIS IS THE START OF THE APP */
 	loadConfiguration(function() {
 		postConfiguration();
@@ -98,45 +101,63 @@ function loadConfiguration(callback) {
 			return;
 		}
 
-		configurationFileData = JSON.parse(data);
+		try {
+			configurationFileData = JSON.parse(data);
 
-		for (var recordNum in configurationFileData.AlertDevices) {
-			newNetworkDevice = processDevice(configurationFileData.AlertDevices[recordNum].mac, 
-				undefined, undefined, undefined, undefined);
+			for (var recordNum in configurationFileData.AlertDevices) {
+				newNetworkDevice = processDevice(configurationFileData.AlertDevices[recordNum].mac, 
+					undefined, undefined, undefined, undefined);
 
-			newNetworkDevice.setAlertDevice(
-				configurationFileData.AlertDevices[recordNum].name,
-				configurationFileData.AlertDevices[recordNum].ttl)
+				newNetworkDevice.setAlertDevice(
+					configurationFileData.AlertDevices[recordNum].name,
+					configurationFileData.AlertDevices[recordNum].ttl)
 
-			newNetworkDevice.setAlertMethods(
-				configurationFileData.AlertDevices[recordNum].alertMethods)
+				newNetworkDevice.setAlertMethods(
+					configurationFileData.AlertDevices[recordNum].alertMethods)
+			}
+
+			for (var recordNum in configurationFileData.WhiteListDevices) {
+				newNetworkDevice = processDevice(configurationFileData.WhiteListDevices[recordNum].mac, 
+					undefined, undefined, undefined, undefined);
+
+				newNetworkDevice.setWhiteListDevice(configurationFileData.WhiteListDevices[recordNum].name)
+			}
+
+			fingCommand_netmask = configurationFileData.FingConfiguration.netmask;
+			nonWhiteListedDeviceWarnInterval = configurationFileData.FingConfiguration.NonWhiteListedDeviceWarnInterval;
+
+			console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
+
+			deviceWatchConfiguration.setIndigoUserName(configurationFileData.IndigoConfiguration.username);
+			deviceWatchConfiguration.setIndigoPassword(configurationFileData.IndigoConfiguration.password);
+			deviceWatchConfiguration.setPasswordProtectFlag(configurationFileData.IndigoConfiguration.passwordProtect);
+			deviceWatchConfiguration.setIndigoVariableRefreshRate(configurationFileData.IndigoConfiguration.scanInterval)
+			deviceWatchConfiguration.setAWS_AccessKey(configurationFileData.AWS.accessKeyId);
+			deviceWatchConfiguration.setAWS_SecretKey(configurationFileData.AWS.secretAccessKey);
+			deviceWatchConfiguration.setFakePublish(configurationFileData.FakePublish);
+			deviceWatchConfiguration.setUnknownDeviceNotification(configurationFileData.UnknownDeviceNotification);
+
+			if (configurationFileData.Debug == "true") debug = true;
+			else debug = false;
+
+			if (callback != null) callback();					
 		}
+		catch (err) {
+			console.log("** (" + getCurrentTime() + ") CONFIGURATION: Got an error.  Going to schedule a re-check in 3 minutes.");				
+			// going to keep trying until we get it right.
+			if (typeof reCheckConfigurationJob !== 'undefined') {
+				reCheckConfigurationJob.cancel();
+				reCheckConfigurationJob = undefined;
+			}
 
-		for (var recordNum in configurationFileData.WhiteListDevices) {
-			newNetworkDevice = processDevice(configurationFileData.WhiteListDevices[recordNum].mac, 
-				undefined, undefined, undefined, undefined);
+			var recheckTime = moment().add('m', 3).format(dateformat);
 
-			newNetworkDevice.setWhiteListDevice(configurationFileData.WhiteListDevices[recordNum].name)
+			reCheckConfigurationJob = schedule.scheduleJob(recheckTime, function() {
+				main();
+
+				reCheckConfigurationJob = undefined;
+			});
 		}
-
-		fingCommand_netmask = configurationFileData.FingConfiguration.netmask;
-		nonWhiteListedDeviceWarnInterval = configurationFileData.FingConfiguration.NonWhiteListedDeviceWarnInterval;
-
-		console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
-
-		deviceWatchConfiguration.setIndigoUserName(configurationFileData.IndigoConfiguration.username);
-		deviceWatchConfiguration.setIndigoPassword(configurationFileData.IndigoConfiguration.password);
-		deviceWatchConfiguration.setPasswordProtectFlag(configurationFileData.IndigoConfiguration.passwordProtect);
-		deviceWatchConfiguration.setIndigoVariableRefreshRate(configurationFileData.IndigoConfiguration.scanInterval)
-		deviceWatchConfiguration.setAWS_AccessKey(configurationFileData.AWS.accessKeyId);
-		deviceWatchConfiguration.setAWS_SecretKey(configurationFileData.AWS.secretAccessKey);
-		deviceWatchConfiguration.setFakePublish(configurationFileData.FakePublish);
-		deviceWatchConfiguration.setUnknownDeviceNotification(configurationFileData.UnknownDeviceNotification);
-
-		if (configurationFileData.Debug == "true") debug = true;
-		else debug = false;
-
-		if (callback != null) callback();		
 	});
 }
 

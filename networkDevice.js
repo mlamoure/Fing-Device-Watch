@@ -43,7 +43,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_mac = mac || 'none',
 		_state,
 		_syncState,
-		_syncStateTimestamp,
+		_syncStateTimestamp,		
 		_ip = ip || 'none',
 		_manufacturer,
 		_fingTimestamp,
@@ -107,17 +107,17 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this.setDeviceState = function (state) {
-		var stateChanged = _state != state;
+		previousState = _state;
 
 		console.log("** (" + this._getCurrentTime() + ") Device state for " + this.getMACAddress() + " is being set to " + state);
 
 		// Alert Device Stuff
-		// if the device state is now off and the previous state was on and it's an alert device, update the alert expiration
+		// if the device is off and the previous state was on and it's an alert device, update the alert expiration
 		if (!state && state != this.getDeviceState() && this.isAlertDevice())
 		{
 			this._scheduleAlert(_alertOffNetworkTTL);
 		}
-		// if the device state is now on and it's an alert device
+		// if the device is on and it's an alert device
 		else if (state && this.isAlertDevice())
 		{
 			// if there was a job scheduled to send that the device is off, cancel the job
@@ -139,7 +139,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			this._reportUnknownDevice();
 		}
 
-		if (stateChanged && this._isReadyforAlert())
+		if (this._isReadyforAlert())
 		{
 			this._alertDevice();
 		}
