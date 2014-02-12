@@ -107,7 +107,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this.setDeviceState = function (state) {
-		previousState = _state;
+		stateChanged = _state != state;
 
 		console.log("** (" + this._getCurrentTime() + ") Device state for " + this.getMACAddress() + " is being set to " + state);
 
@@ -139,7 +139,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			this._reportUnknownDevice();
 		}
 
-		if (this._isReadyforAlert())
+		if (stateChanged && this._isReadyforAlert())
 		{
 			this._alertDevice();
 		}
@@ -479,7 +479,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 					return false;
 				}
 
-				return true;				
+				return true;
 			}
 		}
 
