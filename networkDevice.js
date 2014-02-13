@@ -98,8 +98,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_mac = mac;
 	}
 
-	this.getIndigoState = function() {
-		return this._syncState;
+	this.getSyncState = function() {
+		return _syncState;
 	}
 
 	this.setIPAddress = function(ip) {
@@ -107,7 +107,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this.setDeviceState = function (state) {
-		var stateChanged = _state != state;
+		var stateChanged = _syncState != state;
 
 		console.log("** (" + this._getCurrentTime() + ") Device state for " + this.getMACAddress() + " is being set to " + state);
 
@@ -343,7 +343,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		if (this.isWhiteListedDevice()) console.log("\t\tWhite List Device Name: " + _whiteListDeviceName);
 
 		console.log("\t\tScheduled Alert: " + _scheduledAlertDate);
-		if (this.isAlertDevice()) console.log("\t\tSync'd Value: " + this.getIndigoState());
+		if (this.isAlertDevice()) console.log("\t\tSync'd Value: " + this.getSyncState());
 		if (this.isAlertDevice()) console.log("\t\tSync Value Timestamp: " + _syncStateTimestamp);		
 		console.log("\t******************************************************");		
 	}
@@ -428,62 +428,61 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		}
 	}
 
+	this._getRefreshSyncStateMechanism = function() {
+		for (var recordNum in _alertMethods) {
+			if (_alertMethods[recordNum].method == "indigo") {
+				return _alertMethods[recordNum];
+			}
+		}
+
+		return undefined;		
+	}
+
+	this.hasGetStateMechanism = function () {
+		return (typeof (this._getRefreshSyncStateMechanism()) !== 'undefined');
+	}
+
 	this._isReadyforAlert = function () {
 		// if it's not a device that needs to be announced (alert flag is false)	
 		if (!this.isAlertDevice()) {
 			return false;
 		}
 
-		for (recordNum in _alertMethods) {
-			if (_alertMethods[recordNum].method == "indigo") {
-				if (typeof this.getIndigoState() === 'undefined') {
-					this._refreshIndigoState(_alertMethods[recordNum]);
-
-					console.log("** (" + this._getCurrentTime() + ") No current state is known about the Indigo value of " + this.getAlertDeviceName() + ", current state from fing is " + this.getDeviceState());
-
-					this._scheduleAlert(1);
-
-					return false;
-				}
-
-				console.log("** (" + this._getCurrentTime() + ") Cached Indigo value of " + this.getAlertDeviceName() + " is: " + this.getIndigoState() + ", current state from fing is " + this.getDeviceState());
-
-				if (!this.getIndigoState() && this.getDeviceState())
-				{
-					console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName() + " since Indigo state is false and the device is online");
-
-					return true;
-				}
-				else if (this.getDeviceState() == this.getIndigoState())
-				{
-					console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because Indigo is already set appropriately");
-					return false;
-				}
-				else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
-					console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
-					
-					this._scheduleAlert(_alertOffNetworkTTL);
-
-					return false;
-				}
-
-				console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName());
-				return true;
+		if (typeof this.getSyncState() === 'undefined') {
+			if (this.hasGetStateMechanism()) {
+				this._refreshSyncState(this._getRefreshSyncStateMechanism(_alertMethods[recordNum]));
 			}
-			else if (_alertMethods[recordNum].method == "sns") {
-				if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
-					console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
-					
-					this._scheduleAlert(_alertOffNetworkTTL);
 
-					return false;
-				}
+			console.log("** (" + this._getCurrentTime() + ") No previous state is known about " + this.getAlertDeviceName() + ".  Going to schedule a alert in 1 minute.  Current state from fing is " + this.getDeviceState());
 
-				return true;
-			}
+			this._scheduleAlert(1);
+
+			return false;
 		}
 
-		return false;
+		console.log("** (" + this._getCurrentTime() + ") Sync state of " + this.getAlertDeviceName() + " is: " + this.getSyncState() + ", current state from fing is " + this.getDeviceState());
+
+		if (!this.getSyncState() && this.getDeviceState())
+		{
+			console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName() + " since the sync state is false and the device is online");
+
+			return true;
+		}
+		else if (this.getDeviceState() == this.getSyncState())
+		{
+			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the sync state and the current state are the same");
+			return false;
+		}
+		else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
+			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
+			
+			this._scheduleAlert(_alertOffNetworkTTL);
+
+			return false;
+		}
+
+		console.log("** (" + this._getCurrentTime() + ") Will send an alert for device " + this.getAlertDeviceName() + " because it did not meet any of the other conditions.");
+		return true;
 	}
 
 	this._refreshIndigoState = function(alertMethod) {
