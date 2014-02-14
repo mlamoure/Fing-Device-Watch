@@ -318,6 +318,10 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_alertOffNetworkTTL = alertOffNetworkTTL;
 
 		console.log("** (" + this._getCurrentTime() + ") Alert Device has been enabled for " + alertDeviceName);
+
+		if (typeof(this.getDeviceState()) === 'undefined') {
+			this.setDeviceState(false);
+		}
 	}
 
 	this.logToConsole = function() {
