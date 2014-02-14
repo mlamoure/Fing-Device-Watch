@@ -143,7 +143,9 @@ function loadConfiguration(callback) {
 			if (callback != null) callback();					
 		}
 		catch (err) {
-			console.log("** (" + getCurrentTime() + ") CONFIGURATION: Got an error.  Going to schedule a re-check in 3 minutes. Error: " + err);				
+			console.log("** (" + getCurrentTime() + ") CONFIGURATION: Got an error.  Going to schedule a re-check in 3 minutes. Error: " + err);
+			console.log(err.stack);
+							
 			// going to keep trying until we get it right.
 			if (typeof reCheckConfigurationJob !== 'undefined') {
 				reCheckConfigurationJob.cancel();

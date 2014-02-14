@@ -226,6 +226,10 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	}
 
 	this.isAlertDevice = function () {
+		if (typeof(_alertMethods) === 'undefined') {
+			return false;
+		}
+
 		return _alertDevice && _alertMethods.length > 0;
 	}
 
@@ -320,7 +324,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		console.log("** (" + this._getCurrentTime() + ") Alert Device has been enabled for " + alertDeviceName);
 
 		if (typeof(this.getDeviceState()) === 'undefined') {
-			this.setDeviceState(false);
+			this._scheduleAlert(1);
 		}
 	}
 
