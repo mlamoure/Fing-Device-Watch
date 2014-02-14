@@ -145,8 +145,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		}
 	}
 
-	this._prepare_SNS_Message = function() {
-		var object = { mac: this.getMACAddress(), state: this.getDeviceState(), timestamp: this._getCurrentTime() };
+	this._prepare_SNS_Message = function(deviceState) {
+		var object = { mac: this.getMACAddress(), state: deviceState, timestamp: this._getCurrentTime() };
 		var json = JSON.stringify(object);
 
 		return json;
@@ -557,12 +557,16 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return;
 		}
 
+		var setValue = this.getDeviceState();
+
+		if (typeof(setValue) === 'undefined') {
+			setValue = false;
+		}
+
 		for (var recordNum in _alertMethods) {
 			if (_alertMethods[recordNum].method == "indigo")
 			{
-				var setValue;
-
-				if (this.getDeviceState())
+				if (setValue)
 				{
 					setValue = "value=true";
 				}
@@ -588,7 +592,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			}
 			else if (_alertMethods[recordNum].method == "sns")
 			{
-				this._publish_sns(this._prepare_SNS_Message(), _alertMethods[recordNum]);
+				this._publish_sns(this._prepare_SNS_Message(setValue), _alertMethods[recordNum]);
 			}
 		}
 
