@@ -327,7 +327,6 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		console.log("\t\tIP Address: " + this.getIPAddress());
 		console.log("\t\tFQDN: " + this.getFQDN());
 		console.log("\t\tState: " + this.getDeviceState());
-		console.log("\t\tPrevious State: NOT ENABLED");
 		console.log("\t\tState Timestamp (fing): " + _fingTimestamp);
 
 		if (typeof _configuration !== 'undefined') console.log("\t\tConfiguration set: true");
@@ -451,13 +450,13 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		if (typeof this.getSyncState() === 'undefined') {
 			if (this.hasGetStateMechanism()) {
 				this._refreshSyncState(this._getRefreshSyncStateMechanism(_alertMethods[recordNum]));
+				this._scheduleAlert(1);
+
+				return false;
 			}
 
 			console.log("** (" + this._getCurrentTime() + ") No previous state is known about " + this.getAlertDeviceName() + ".  Going to schedule a alert in 1 minute.  Current state from fing is " + this.getDeviceState());
-
-			this._scheduleAlert(1);
-
-			return false;
+			return true;
 		}
 
 		console.log("** (" + this._getCurrentTime() + ") Sync state of " + this.getAlertDeviceName() + " is: " + this.getSyncState() + ", current state from fing is " + this.getDeviceState());
