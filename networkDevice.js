@@ -1,3 +1,12 @@
+var JSONConfigurationController = require("./JSONConfigurationController.js");
+var AmazonSNSPublisher = require("./amazonSNSPublisher.js");
+var moment = require('moment');
+var exec = require('child_process').exec;
+var util = require('util');
+var schedule = require('node-schedule');
+var csv = require('csv');
+var needle = require('needle');
+
 /*
 	Fing Output example:
 		2013/12/12 18:14:32;up;10.66.0.11;;camera2.home.mikelamoureux.net;F0:7D:68:09:B7:6B;D-Link
@@ -28,18 +37,9 @@
 
 function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	var _self = this,
-		_moment = require('moment'),
-		_spawn = require('child_process').spawn,
-		_exec = require('child_process').exec,
-		_aws = require('aws-sdk'),
-		_util = require('util'),
 		_AWS_SNS,
-		_schedule = require('node-schedule'),
-		Configuration = require("./configuration.js"),
-		_csv = require('csv'),
 		_configuration,
 		_dateformat = "YYYY/MM/DD HH:mm:ss",
-		_needle = require('needle'),
 		_mac = mac || 'none',
 		_state,
 		_syncState,
@@ -51,7 +51,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_alertMethods;
 
 	this._getCurrentTime = function () {
-		return (_moment().format(_dateformat));
+		return (moment().format(_dateformat));
 	}
 
 	this.getMACAddress = function () {
@@ -168,18 +168,6 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		if (typeof _configuration === 'undefined') console.log("** (" + this._getCurrentTime() + ") Configuration for " + this.getMACAddress() + " is being set");
 
 		_configuration = configuration;
-
-		if (_configuration.isAWSEnabled())
-		{
-			// configure AWS 
-			_aws.config.update({
-				'region': 'us-east-1',
-			    'accessKeyId': _configuration.getAccessKey(),
-			    'secretAccessKey': _configuration.getSecretKey()
-			});
-
-			_AWS_SNS = new _aws.SNS().client;
-		}		
 	}
 
 // **************************************************************************
@@ -267,9 +255,9 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		}
 
 		// Add two minutes to the current time.
-		var recheckWhiteListStatus = _moment().add('m', addMinutes).format(_dateformat);
+		var recheckWhiteListStatus = moment().add('m', addMinutes).format(_dateformat);
 
-		_whiteListCheckJob = _schedule.scheduleJob(recheckWhiteListStatus, function() {
+		_whiteListCheckJob = schedule.scheduleJob(recheckWhiteListStatus, function() {
 			console.log("** (" + _self._getCurrentTime() + ") Checking (via Scheduled) whitelist status for " + _self.getMACAddress());
 
 			// White List Device Stuff
@@ -308,7 +296,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			}
 			else if(alertMethods[recordNum].method == "sns")
 			{
-
+				// should be all good here, but leaving this frame in place.
 			}
 		}
 	}
@@ -366,9 +354,9 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 		console.log("** (" + this._getCurrentTime() + ") " + alertText);
 
-		for (var recordNum in _configuration.getUnknownDeviceNotification()) {
+		for (var recordNum in _configuration.data.UnknownDeviceNotification) {
 			try {
-			    _exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + _configuration.getUnknownDeviceNotification()[recordNum].address, function(error, stdout, stderr)
+			    exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + _configuration.data.UnknownDeviceNotification[recordNum].address, function(error, stdout, stderr)
 			    	{
 			    		console.log(stdout); 
 			    	});
@@ -387,18 +375,18 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 	{
 		if (typeof _scheduledAlertJob === 'undefined')
 		{
-			_scheduledAlertDate = _moment().add('m', addMinutes).format(_dateformat);
+			_scheduledAlertDate = moment().add('m', addMinutes).format(_dateformat);
 
-			var schedule = new Date(
-				_moment(_scheduledAlertDate, _dateformat).year(), 
-				_moment(_scheduledAlertDate, _dateformat).month(), 
-				_moment(_scheduledAlertDate, _dateformat).date(), 
-				_moment(_scheduledAlertDate, _dateformat).hour(), 
-				_moment(_scheduledAlertDate, _dateformat).minute(), 
-				_moment(_scheduledAlertDate, _dateformat).seconds() + 1
+			var toSchedule = new Date(
+				moment(_scheduledAlertDate, _dateformat).year(), 
+				moment(_scheduledAlertDate, _dateformat).month(), 
+				moment(_scheduledAlertDate, _dateformat).date(), 
+				moment(_scheduledAlertDate, _dateformat).hour(), 
+				moment(_scheduledAlertDate, _dateformat).minute(), 
+				moment(_scheduledAlertDate, _dateformat).seconds() + 1
 			);
 
-			_scheduledAlertJob = _schedule.scheduleJob(schedule, function() {
+			_scheduledAlertJob = schedule.scheduleJob(toSchedule, function() {
 				console.log("** (" + _self._getCurrentTime() + ") Running the scheduled job to alert for device " + _self.getAlertDeviceName());
 				_self._scheduledAlertJob = undefined;
 				_self._scheduledAlertDate = undefined;
@@ -430,7 +418,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 				_scheduledIndigoRefreshIntervalID = setInterval(function() {
 					_self._refreshIndigoState(alertMethod);
-		        }, _configuration.getIndigoVariableRefreshRate());			
+		        }, _configuration.data.IndigoConfiguration.scanInterval * 1000 * 60);			
 			}
 		}
 	}
@@ -483,7 +471,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
 			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
 			
-			this._scheduleAlert(_alertOffNetworkTTL);
+			scheduleAlert(_alertOffNetworkTTL);
 
 			return false;
 		}
@@ -504,8 +492,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return;
 		}
 
-		_needle.get(alertMethod.indigoVariableEndpoint + ".txt", function(err, resp, body) {
-			_csv()
+		needle.get(alertMethod.indigoVariableEndpoint + ".txt", function(err, resp, body) {
+			csv()
 			.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
 			.to.array( function(data, count) {
 				console.log("** (" + _self._getCurrentTime() + ") Raw HTTP request results from Indigo: \n" + body);
@@ -522,31 +510,10 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		});		
 	}
 
-	this._publish_sns = function(message, alertMethod) {
-		console.log("** (" + this._getCurrentTime() + ") About to publish a SNS message for device " + this.getAlertDeviceName() + " message: " + message);
-
-		if (!_configuration.isAWSEnabled()) return;
-		if (typeof(alertMethod.AWSTopicARN) === 'undefined') return;
-
-		_AWS_SNS.publish({
-		    'TopicArn': alertMethod.AWSTopicARN,
-		    'Message': message,
-		}, function (err, result) {
-		 
-			if (err !== null) {
-				console.log("** (" + _self._getCurrentTime() + ") Sent a message and Amazon responded with an Error: " + _util.inspect(err));
-				return;
-		    }
-			
-			console.log("** (" + _self._getCurrentTime() + ") Sent a message and Amazon responded with: ");
-			console.log(result);
-		});
-	}
-
 	this._alertDevice = function() {
 		if (!this.isAlertDevice()) return;
 
-		if (!_configuration.publishEnabled()) {
+		if (_configuration.data.FakePublish) {
 			console.log("** (" + _self._getCurrentTime() + ") Not going to publish (see configuration) ");
 
 			return;
@@ -577,22 +544,22 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 				console.log("** (" + this._getCurrentTime() + ") ALERT ** Alert being sent for device - " + this.getAlertDeviceName() + ": State is " + setValue);
 
-				if (_configuration.isPasswordProtected())
+				if (_configuration.data.IndigoConfiguration.passwordProtect)
 				{
-					_needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, { username: _configuration.getIndigoUserName(), password: _configuration.getIndigoPassword(), auth: 'digest' }, function() {
+					needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, { username: _configuration.data.IndigoConfiguration.username, password: _configuration.data.IndigoConfiguration.password, auth: 'digest' }, function() {
 						//
 					})
 				}
 				else
 				{
-					_needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, function() {
+					needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, function() {
 						//
 					})
 				}
 			}
 			else if (_alertMethods[recordNum].method == "sns")
 			{
-				this._publish_sns(this._prepare_SNS_Message(setValue), _alertMethods[recordNum]);
+				_configuration.amazonSNSPublisher.publish(_alertMethods[recordNum].AWSTopicARN, this._prepare_SNS_Message(setValue));
 			}
 		}
 

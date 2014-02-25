@@ -6,15 +6,15 @@ var path = require('path');
 var csv = require('csv');
 var moment = require('moment');
 var schedule = require('node-schedule');
+
 var NetworkDevice = require("./networkDevice.js");
-var Configuration = require("./configuration.js");
-var deviceWatchConfiguration;
+var JSONConfigurationController = require("./JSONConfigurationController.js");
+
+var configuration;
 var networkDevices = new Array();
+
 var dateformat = "YYYY/MM/DD HH:mm:ss";
 var fingCommand;
-var debug = false;
-var configurationFileData;
-var nonWhiteListedDeviceWarnInterval;
 var nonWhiteListedDeviceWarnIntervalID;
 var configFileIncPath = path.join(__dirname + '/configuration.json');
 var convert_min_to_ms = 60 * 1000;
@@ -22,22 +22,37 @@ var convert_min_to_ms = 60 * 1000;
 function main() {
 	fs.unwatchFile(configFileIncPath);
 
-	/* THIS IS THE START OF THE APP */
-	loadConfiguration(function() {
-		postConfiguration();
+	clearAlertDevices();
+	clearWhiteListDevices();
 
-		fs.watchFile(configFileIncPath, function (event, filename) {
-			console.log("** (" + getCurrentTime() + ") RELOADING CONFIGURATION");
-
-			loadConfiguration(function() {
-				postConfiguration();
-			});
-		});
-
-	});
+	configuration = new JSONConfigurationController();
+	configuration.setConfiguration(configFileIncPath);
+	configuration.on("configComplete", postConfiguration);
 }
 
+
 function postConfiguration() {
+	for (var recordNum in configuration.data.AlertDevices) {
+		newNetworkDevice = processDevice(configuration.data.AlertDevices[recordNum].mac, 
+			undefined, undefined, undefined, undefined);
+
+		newNetworkDevice.setAlertDevice(
+			configuration.data.AlertDevices[recordNum].name,
+			configuration.data.AlertDevices[recordNum].ttl)
+
+		newNetworkDevice.setAlertMethods(
+			configuration.data.AlertDevices[recordNum].alertMethods)
+	}
+
+	for (var recordNum in configuration.data.WhiteListDevices) {
+		newNetworkDevice = processDevice(configuration.data.WhiteListDevices[recordNum].mac, 
+			undefined, undefined, undefined, undefined);
+
+		newNetworkDevice.setWhiteListDevice(configuration.data.WhiteListDevices[recordNum].name)
+	}
+
+	console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + configuration.data.FingConfiguration.netmask);				
+
 	if (typeof fingCommand !== 'undefined') {
 		fingCommand.stdin.pause();
 		fingCommand.kill();
@@ -55,7 +70,7 @@ function postConfiguration() {
 	nonWhiteListedDeviceWarnIntervalID = setInterval(function() {
 		clearUnknownDevicesReportedFlag();
 
-	}, nonWhiteListedDeviceWarnInterval * convert_min_to_ms * 60);	
+	}, configuration.data.NonWhiteListedDeviceWarnInterval * convert_min_to_ms * 60);	
 }
 
 
@@ -81,86 +96,6 @@ function clearUnknownDevicesReportedFlag() {
 			networkDevices[deviceCounter].clearUnknownDeviceReportedFlag();
 		}
 	}
-}
-
-/*
-	Function: loadConfiguration(callback)
-
-	Parameters:
-		callback = the Callback function that this function calls if configuration is sucessfull.  If it is not sucessful, nothing is called, however an error is placed to the console
-*/
-function loadConfiguration(callback) {
-	clearAlertDevices();
-	clearWhiteListDevices();
-
-	deviceWatchConfiguration = new Configuration();
-
-	fs.readFile(configFileIncPath, 'utf8', function (err, data) {
-		if (err) {
-			console.log("** (" + getCurrentTime() + ") ERROR LOADING CONFIGURATION: " + err);
-			return;
-		}
-
-		try {
-			configurationFileData = JSON.parse(data);
-
-			for (var recordNum in configurationFileData.AlertDevices) {
-				newNetworkDevice = processDevice(configurationFileData.AlertDevices[recordNum].mac, 
-					undefined, undefined, undefined, undefined);
-
-				newNetworkDevice.setAlertDevice(
-					configurationFileData.AlertDevices[recordNum].name,
-					configurationFileData.AlertDevices[recordNum].ttl)
-
-				newNetworkDevice.setAlertMethods(
-					configurationFileData.AlertDevices[recordNum].alertMethods)
-			}
-
-			for (var recordNum in configurationFileData.WhiteListDevices) {
-				newNetworkDevice = processDevice(configurationFileData.WhiteListDevices[recordNum].mac, 
-					undefined, undefined, undefined, undefined);
-
-				newNetworkDevice.setWhiteListDevice(configurationFileData.WhiteListDevices[recordNum].name)
-			}
-
-			fingCommand_netmask = configurationFileData.FingConfiguration.netmask;
-			nonWhiteListedDeviceWarnInterval = configurationFileData.FingConfiguration.NonWhiteListedDeviceWarnInterval;
-
-			console.log("** (" + getCurrentTime() + ") CONFIGURATION: Fing netmask being set to: " + fingCommand_netmask);				
-
-			deviceWatchConfiguration.setIndigoUserName(configurationFileData.IndigoConfiguration.username);
-			deviceWatchConfiguration.setIndigoPassword(configurationFileData.IndigoConfiguration.password);
-			deviceWatchConfiguration.setPasswordProtectFlag(configurationFileData.IndigoConfiguration.passwordProtect);
-			deviceWatchConfiguration.setIndigoVariableRefreshRate(configurationFileData.IndigoConfiguration.scanInterval)
-			deviceWatchConfiguration.setAWS_AccessKey(configurationFileData.AWS.accessKeyId);
-			deviceWatchConfiguration.setAWS_SecretKey(configurationFileData.AWS.secretAccessKey);
-			deviceWatchConfiguration.setFakePublish(configurationFileData.FakePublish);
-			deviceWatchConfiguration.setUnknownDeviceNotification(configurationFileData.UnknownDeviceNotification);
-
-			if (configurationFileData.Debug == "true") debug = true;
-			else debug = false;
-
-			if (callback != null) callback();					
-		}
-		catch (err) {
-			console.log("** (" + getCurrentTime() + ") CONFIGURATION: Got an error.  Going to schedule a re-check in 3 minutes. Error: " + err);
-			console.log(err.stack);
-							
-			// going to keep trying until we get it right.
-			if (typeof reCheckConfigurationJob !== 'undefined') {
-				reCheckConfigurationJob.cancel();
-				reCheckConfigurationJob = undefined;
-			}
-
-			var recheckTime = moment().add('m', 3).format(dateformat);
-
-			reCheckConfigurationJob = schedule.scheduleJob(recheckTime, function() {
-				main();
-
-				reCheckConfigurationJob = undefined;
-			});
-		}
-	});
 }
 
 function assignConfiguration() {
@@ -191,11 +126,11 @@ function assignConfiguration() {
 */
 function runFing()
 {
-	fingCommand = spawn('sudo',['fing', '-n', fingCommand_netmask, '-o', 'log,csv,console']);
+	fingCommand = spawn('sudo',['fing', '-n', configuration.data.FingConfiguration.netmask, '-o', 'log,csv,console']);
 
 	fingCommand.stdout.on('data', function (data) {
 		
-			if (debug) console.log("Raw Output from fing: " + data);
+			if (configuration.data.Debug) console.log("Raw Output from fing: " + data);
 
 			var str = data.toString(), lines = str.split(/(\r?\n)/g);
 
@@ -209,7 +144,7 @@ function runFing()
 				}
 				else if (lines[i].length > 5)
 				{
-					if (debug) console.log("** (" + getCurrentTime() + ") Line from Fing being ignored: " + lines[i]);
+					if (configuration.data.Debug) console.log("** (" + getCurrentTime() + ") Line from Fing being ignored: " + lines[i]);
 				}
 			}
 	});
@@ -227,7 +162,7 @@ function parseFingOutput(data) {
 	//console.log(data.toString());
 	csv()
 	.from.string(data.toString(), {delimiter: ';'})
-	.to.array( function(device, count) {
+	.to.array(function(device, count) {
 		var manufacturer = device[0][6];
 		var mac = device[0][5];
 		var state = device[0][1];
@@ -266,15 +201,15 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 	if (typeof(newNetworkDevice) === 'undefined') {
 		newRecord = true;
 		newNetworkDevice = new NetworkDevice(mac, ip, fqdn, manufacturer);
-		newNetworkDevice.setConfiguration(deviceWatchConfiguration);
+		newNetworkDevice.setConfiguration(configuration);
 		newNetworkDevice.setDeviceState(state);
 	}
 
 	if (!newRecord)
 	{
-		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE " + mac + " / " + newNetworkDevice.getMACAddress() + " -- **************");
+		if (configuration.data.Debug) console.log ("\n***************** " + getCurrentTime() + " -- UPDATE DEVICE " + mac + " / " + newNetworkDevice.getMACAddress() + " -- **************");
 
-		newNetworkDevice.setConfiguration(deviceWatchConfiguration);
+		newNetworkDevice.setConfiguration(configuration);
 		if (typeof(ip) !== 'undefined') newNetworkDevice.setIPAddress(ip);
 		if (typeof(state) !== 'undefined') newNetworkDevice.setDeviceState(state);
 		if (typeof(fqdn) !== 'undefined') newNetworkDevice.setFQDN(fqdn);
@@ -282,7 +217,7 @@ function processDevice(mac, state, ip, fqdn, manufacturer)
 	}
 	else if (newRecord)
 	{
-		if (debug) console.log ("\n***************** " + getCurrentTime() + " -- NEW DEVICE -- **************");
+		if (configuration.data.Debug) console.log ("\n***************** " + getCurrentTime() + " -- NEW DEVICE -- **************");
 		
 		networkDevices[networkDevices.length] = newNetworkDevice;
 	}
