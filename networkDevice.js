@@ -471,7 +471,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
 			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
 			
-			scheduleAlert(_alertOffNetworkTTL);
+			this.scheduleAlert(_alertOffNetworkTTL);
 
 			return false;
 		}
