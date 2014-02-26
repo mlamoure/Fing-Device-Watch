@@ -22,6 +22,11 @@
 		"password": "password"
 	},
 
+	"EmailConfiguration" : {
+		"SMTP_Server": "server",
+		"EmailFrom": "user@host"
+	},
+
 	"NonWhiteListedDeviceWarnInterval": 24,
 
 	"Debug": false,

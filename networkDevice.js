@@ -6,6 +6,7 @@ var util = require('util');
 var schedule = require('node-schedule');
 var csv = require('csv');
 var needle = require('needle');
+var nodemailer = require("nodemailer");
 
 /*
 	Fing Output example:
@@ -355,15 +356,64 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		console.log("** (" + this._getCurrentTime() + ") " + alertText);
 
 		for (var recordNum in _configuration.data.UnknownDeviceNotification) {
-			try {
-			    exec("echo \"" + alertText + "\" | /usr/bin/mail -s \"Network Device Alert\" " + _configuration.data.UnknownDeviceNotification[recordNum].address, function(error, stdout, stderr)
-			    	{
-			    		console.log(stdout); 
-			    	});
+
+			// create reusable transport method (opens pool of SMTP connections)
+			var smtpTransport = nodemailer.createTransport("SMTP",{
+				host: _configuration.data.EmailConfiguration.SMTP_Server, // hostname
+				secureConnection: true, // use SSL
+			    port: 465, // port for secure SMTP			    
+//			    auth: {
+//			        user: "gmail.user@gmail.com",
+//			        pass: "userpass"
+//			    }
+			});
+
+			var emailBody = "";
+
+			emailBody += "\t***************** -- Device Details " + this._getCurrentTime() + " -- **************";
+			emailBody += "\t\tTimestamp: " + _fingTimestamp;
+			emailBody += "\t\tMac: " + this.getMACAddress();
+			emailBody += "\t\tIP Address: " + this.getIPAddress();
+			emailBody += "\t\tFQDN: " + this.getFQDN();
+			emailBody += "\t\tState: " + this.getDeviceState();
+			emailBody += "\t\tState Timestamp (fing): " + _fingTimestamp;
+
+			if (typeof _configuration !== 'undefined') emailBody += "\t\tConfiguration set: true";
+			else emailBody += "\t\tConfiguration set: false";
+
+			emailBody += "\t\tis a Whitelisted device?: " + this.isWhiteListedDevice();
+			emailBody += "\t\thas been reported?: " + _unknownDeviceReported;
+			emailBody += "\t\tReported as a non-whitelisted Device Timestamp: " + _unknownDeviceReportedTimestamp;
+			emailBody += "\t\tis a Alert Device?: " + this.isAlertDevice();
+
+			if (this.isAlertDevice()) emailBody += "\t\tAlert Device Name: " + this.getAlertDeviceName();
+			if (this.isAlertDevice()) emailBody += "\t\tScheduled refresh: " + _scheduledIndigoRefresh;
+			if (this.isWhiteListedDevice()) emailBody += "\t\tWhite List Device Name: " + _whiteListDeviceName;
+
+			emailBody += "\t\tScheduled Alert: " + _scheduledAlertDate;
+			if (this.isAlertDevice()) emailBody += "\t\tSync'd Value: " + this.getSyncState();
+			if (this.isAlertDevice()) emailBody += "\t\tSync Value Timestamp: " + _syncStateTimestamp;		
+			emailBody += "\t******************************************************";		
+
+			// setup e-mail data with unicode symbols
+			var mailOptions = {
+			    from: _configuration.data.EmailConfiguration.EmailFrom, // sender address
+			    to: _configuration.data.UnknownDeviceNotification[recordNum].address, // list of receivers
+			    subject: "Network Device Alert", // Subject line
+			    text: emailBody, // plaintext body
 			}
-			catch (err) {
-				console.log("** (" + this._getCurrentTime() + ") ERROR: There was an ERROR when attempting to send out a network device alert: " + err);
-			}
+
+			// send mail with defined transport object
+			smtpTransport.sendMail(mailOptions, function(error, response){
+			    if(error){
+			        console.log(error);
+			    }else{
+			        console.log("Message sent: " + response.message);
+			    }
+
+			    // if you don't want to use this transport object anymore, uncomment following line
+			    smtpTransport.close(); // shut down the connection pool, no more messages
+			});
 		}
 
 		_unknownDeviceReported = true;
