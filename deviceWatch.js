@@ -28,8 +28,13 @@ function main() {
 	configuration = new JSONConfigurationController();
 	configuration.setConfiguration(configFileIncPath);
 	configuration.on("configComplete", postConfiguration);
+	configuration.on("reset", resetConfiguration);
 }
 
+function resetConfiguration() {
+	clearAlertDevices();
+	clearWhiteListDevices();
+}
 
 function postConfiguration() {
 	for (var recordNum in configuration.data.AlertDevices) {
@@ -70,7 +75,7 @@ function postConfiguration() {
 	nonWhiteListedDeviceWarnIntervalID = setInterval(function() {
 		clearUnknownDevicesReportedFlag();
 
-	}, configuration.data.NonWhiteListedDeviceWarnInterval * convert_min_to_ms * 60);	
+	}, configuration.data.NonWhiteListedDeviceWarnInterval * convert_min_to_ms);	
 }
 
 

@@ -7,11 +7,12 @@ var moment = require('moment');
 var schedule = require('node-schedule');
 var AmazonSNSPublisher = require('./amazonSNSPublisher.js');
 
-function JSONConfigurationController() {
+function JSONConfigurationController(configFile) {
 	var _self = this;
-	var _configFile;
+	var _configFile = configFile || undefined;
 	var _configComplete = false;
 	var _configCompleteCallback;
+	var _configResetCallback;
 	var _dateformat = "YYYY/MM/DD HH:mm:ss";
 	var _reCheckConfigurationJob;
 
@@ -21,6 +22,7 @@ function JSONConfigurationController() {
 	this.setConfiguration = function (configFile) {
 		_configFile = configFile;
 
+		this._clearConfiguration();
 		this._loadConfiguration();
 		this._monitor();
 	}
@@ -33,9 +35,27 @@ function JSONConfigurationController() {
 				_configCompleteCallback();		
 			}
 		}
+		else if (onEvent == "reset") {
+			_configResetCallback = eventFunction;
+		}
+	}
+
+	this._clearConfiguration = function () {
+		_self.amazonSNSPublisher = undefined;
+
+		if (typeof(_configResetCallback) !== 'undefined') {
+			_configResetCallback();
+		}
 	}
 
 	this._monitor = function () {
+		// watch the configuration file for changes.  reload if anything changes
+		fs.watchFile(_configFile, function (event, filename) {
+			console.log("** (" + _self._getCurrentTime() + ") RELOADING CONFIGURATION");
+
+			_self._clearConfiguration();
+			_self._loadConfiguration();
+		});		
 	}
 
 	this._loadConfiguration = function () {
@@ -67,7 +87,8 @@ function JSONConfigurationController() {
 				var recheckTime = moment().add('m', 3).format(_dateformat);
 
 				_reCheckConfigurationJob = schedule.scheduleJob(recheckTime, function() {
-					main();
+					_self._clearConfiguration();
+					_self._loadConfiguration();
 
 					_reCheckConfigurationJob = undefined;
 				});
