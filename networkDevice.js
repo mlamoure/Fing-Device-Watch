@@ -291,7 +291,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		{
 			if (_alertMethods[recordNum].method == "indigo" )
 			{
-				this._refreshIndigoState(_alertMethods[recordNum]);
+				this._refreshSyncState(_alertMethods[recordNum]);
 				this._scheduleIndigoVariableRefresh(_alertMethods[recordNum]);
 			}
 			else if(alertMethods[recordNum].method == "sns")
@@ -417,7 +417,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				_scheduledIndigoRefresh = true;
 
 				_scheduledIndigoRefreshIntervalID = setInterval(function() {
-					_self._refreshIndigoState(alertMethod);
+					_self._refreshSyncState(alertMethod);
 		        }, _configuration.data.IndigoConfiguration.scanInterval * 1000 * 60);			
 			}
 		}
@@ -445,7 +445,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 		if (typeof this.getSyncState() === 'undefined') {
 			if (this.hasGetStateMechanism()) {
-				this._refreshSyncState(this._getRefreshSyncStateMechanism(_alertMethods[recordNum]));
+				this._refreshSyncState(this._getRefreshSyncStateMechanism());
 				this._scheduleAlert(1);
 
 				return false;
@@ -471,7 +471,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		else if (!this.getDeviceState() && (this._getCurrentTime() < this.getScheduledAlertDate())) {
 			console.log("** (" + this._getCurrentTime() + ") Not going to send an alert for device " + this.getAlertDeviceName() + " because the expiration time has not passed (" + this.getScheduledAlertDate() + ")");
 			
-			this.scheduleAlert(_alertOffNetworkTTL);
+			this._scheduleAlert(_alertOffNetworkTTL);
 
 			return false;
 		}
@@ -480,7 +480,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		return true;
 	}
 
-	this._refreshIndigoState = function(alertMethod) {
+	this._refreshSyncState = function(alertMethod) {
 		var newIndigoValue = false;
 
 		if (typeof(alertMethod) === 'undefined') {
