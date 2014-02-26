@@ -356,7 +356,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 		for (var recordNum in _configuration.data.UnknownDeviceNotification) {
 			try {
-			    exec("echo \"" + alertText + "\" | mail -s \"Network Device Alert\" " + _configuration.data.UnknownDeviceNotification[recordNum].address, function(error, stdout, stderr)
+			    exec("echo \"" + alertText + "\" | /usr/bin/mail -s \"Network Device Alert\" " + _configuration.data.UnknownDeviceNotification[recordNum].address, function(error, stdout, stderr)
 			    	{
 			    		console.log(stdout); 
 			    	});
