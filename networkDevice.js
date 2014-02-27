@@ -427,7 +427,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		{
 			_scheduledAlertDate = moment().add('m', addMinutes).format(_dateformat);
 
-			var toSchedule = new Date(
+/*			var toSchedule = new Date(
 				moment(_scheduledAlertDate, _dateformat).year(), 
 				moment(_scheduledAlertDate, _dateformat).month(), 
 				moment(_scheduledAlertDate, _dateformat).date(), 
@@ -435,8 +435,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				moment(_scheduledAlertDate, _dateformat).minute(), 
 				moment(_scheduledAlertDate, _dateformat).seconds() + 1
 			);
-
-			_scheduledAlertJob = schedule.scheduleJob(toSchedule, function() {
+*/
+			_scheduledAlertJob = schedule.scheduleJob(_scheduledAlertDate, function() {
 				console.log("** (" + _self._getCurrentTime() + ") Running the scheduled job to alert for device " + _self.getAlertDeviceName());
 				_self._scheduledAlertJob = undefined;
 				_self._scheduledAlertDate = undefined;
