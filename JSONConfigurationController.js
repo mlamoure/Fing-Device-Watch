@@ -15,6 +15,7 @@ function JSONConfigurationController(configFile) {
 	var _configResetCallback;
 	var _dateformat = "YYYY/MM/DD HH:mm:ss";
 	var _reCheckConfigurationJob;
+	var _scheduledReloadJob;
 
 	this.amazonSNSPublisher;
 	this.data;
@@ -41,11 +42,10 @@ function JSONConfigurationController(configFile) {
 	}
 
 	this._clearConfiguration = function () {
-		_self.amazonSNSPublisher = undefined;
-
 		if (typeof(_configResetCallback) !== 'undefined') {
 			_configResetCallback();
 		}
+		_self.amazonSNSPublisher = undefined;
 	}
 
 	this._monitor = function () {
@@ -54,7 +54,17 @@ function JSONConfigurationController(configFile) {
 			console.log("** (" + _self._getCurrentTime() + ") RELOADING CONFIGURATION");
 
 			_self._clearConfiguration();
-			_self._loadConfiguration();
+			console.log("** (" + _self._getCurrentTime() + ") Will re-load configuration in 30 seconds to allow the app to properly reset before reloading.");
+
+			if (typeof _scheduledReloadJob === 'undefined')
+			{
+				_reloadTime = moment().add('s', 30).format(_dateformat);
+
+				_scheduledReloadJob = schedule.scheduleJob(_reloadTime, function() {
+					_self._loadConfiguration();
+					_scheduledReloadJob = undefined;
+				});
+			}
 		});		
 	}
 

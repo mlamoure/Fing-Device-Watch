@@ -19,6 +19,7 @@ Installation
 						npm install needle
 						npm install node-schedule
 						npm install aws-sdk
+						npm install nodemailer --save
 
 	4. If using this with Perceptive Automation's Indigo, create Indigo variables for each of the devices you would like to track.
 	The variables can be named however you wish, keep the naming memorable, and keep track of them as you will need the information in the next few steps.

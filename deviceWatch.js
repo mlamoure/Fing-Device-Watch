@@ -20,8 +20,6 @@ var configFileIncPath = path.join(__dirname + '/configuration.json');
 var convert_min_to_ms = 60 * 1000;
 
 function main() {
-	fs.unwatchFile(configFileIncPath);
-
 	clearAlertDevices();
 	clearWhiteListDevices();
 
