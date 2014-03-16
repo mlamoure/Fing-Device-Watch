@@ -52,6 +52,8 @@ Supported Alert Methods
 
 Change Log
 ---
+2014-3-16: Introduced wakeMethods.  Pushover is supported.  This allows the script to attempt to wake the device if it has appeared offline.  If the wake is sucessful, it will be picked up by the deviceWatch.js script and a "offline" alert will be cancelled.  This improves the alert reliability and accuracy.
+
 2014-1-13: Major code refactoring.  Now object oriented (make sure you do a full git clone to obtain the new .js files).  Added node-schedule support to improve event based and scheduled items, relyng less on polling.  Should significantly improve performance and speed up notifications when devices come off the network and the TTL expires.  The Device_Scan_Interval configuration option has now been depreciated.
 
 2014-1-12: Fixed some async annoyances that would update Indigo more frequently than needed.

@@ -52,6 +52,15 @@
 					"method": "sns",
 					"AWSTopicARN": "arn:aws:sns:xxx"
 				}
+			],
+			"wakeMethods": [
+				{
+					"method": "pushover",
+					"user": "USER KEY",
+					"token": "APP TOKEN",
+					"device": "iphone",
+					"priority": -1
+				}
 			]
 		},
 		{

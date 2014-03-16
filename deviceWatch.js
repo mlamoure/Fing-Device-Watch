@@ -45,6 +45,9 @@ function postConfiguration() {
 
 		newNetworkDevice.setAlertMethods(
 			configuration.data.AlertDevices[recordNum].alertMethods)
+
+		newNetworkDevice.setWakeMethods(
+			configuration.data.AlertDevices[recordNum].wakeMethods)
 	}
 
 	for (var recordNum in configuration.data.WhiteListDevices) {

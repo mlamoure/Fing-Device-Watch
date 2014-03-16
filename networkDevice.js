@@ -7,6 +7,7 @@ var schedule = require('node-schedule');
 var csv = require('csv');
 var needle = require('needle');
 var nodemailer = require("nodemailer");
+var push = require( 'pushover-notifications' );
 
 /*
 	Fing Output example:
@@ -129,6 +130,11 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				_scheduledAlertJob.cancel();
 				_scheduledAlertJob = undefined;
 			}
+			if (typeof _scheduledWakeupJob !== 'undefined')
+			{
+				_scheduledWakeupJob.cancel();
+				_scheduledWakeupJob	 = undefined;
+			}
 		}
 
 		_state = state;
@@ -202,7 +208,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		_scheduledAlertDate,
 		_scheduledAlertJob,
 		_scheduledIndigoRefresh = false,
-		_scheduledIndigoRefreshIntervalID;
+		_scheduledIndigoRefreshIntervalID,
+		_wakeMethods;
 
 	this.getScheduledAlertDate = function () {
 		return _scheduledAlertDate;
@@ -282,7 +289,17 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		{
 			_scheduledAlertJob.cancel();
 			_scheduledAlertJob = undefined;
-		}		
+		}	
+
+		if (typeof _scheduledWakeupJob !== 'undefined')
+		{
+			_scheduledWakeupJob.cancel();
+			_scheduledWakeupJob	 = undefined;
+		}
+	}
+
+	this.setWakeMethods = function (wakeMethods) {
+		_wakeMethods = wakeMethods;
 	}
 
 	this.setAlertMethods = function (alertMethods) {
@@ -361,7 +378,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			var smtpTransport = nodemailer.createTransport("SMTP",{
 				host: _configuration.data.EmailConfiguration.SMTP_Server, // hostname
 				secureConnection: true, // use SSL
-			    port: 465, // port for secure SMTP			    
+				port: 465, // port for secure SMTP			    
 //			    auth: {
 //			        user: "gmail.user@gmail.com",
 //			        pass: "userpass"
@@ -397,22 +414,22 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 			// setup e-mail data with unicode symbols
 			var mailOptions = {
-			    from: _configuration.data.EmailConfiguration.EmailFrom, // sender address
-			    to: _configuration.data.UnknownDeviceNotification[recordNum].address, // list of receivers
-			    subject: "Network Device Alert", // Subject line
-			    text: emailBody, // plaintext body
+				from: _configuration.data.EmailConfiguration.EmailFrom, // sender address
+				to: _configuration.data.UnknownDeviceNotification[recordNum].address, // list of receivers
+				subject: "Network Device Alert", // Subject line
+				text: emailBody, // plaintext body
 			}
 
 			// send mail with defined transport object
 			smtpTransport.sendMail(mailOptions, function(error, response){
-			    if(error){
-			        console.log(error);
-			    }else{
-			        console.log("Message sent: " + response.message);
-			    }
+				if(error){
+					console.log(error);
+				}else{
+					console.log("Message sent: " + response.message);
+				}
 
-			    // if you don't want to use this transport object anymore, uncomment following line
-			    smtpTransport.close(); // shut down the connection pool, no more messages
+				// if you don't want to use this transport object anymore, uncomment following line
+				smtpTransport.close(); // shut down the connection pool, no more messages
 			});
 		}
 
@@ -423,31 +440,85 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 //	the variable 'schedule' must be of type Date()
 	this._scheduleAlert = function (addMinutes)
 	{
-		if (typeof _scheduledAlertJob === 'undefined')
+		if (typeof _scheduledAlertJob !== 'undefined')
 		{
-			_scheduledAlertDate = moment().add('m', addMinutes).format(_dateformat);
+			_scheduledAlertJob.cancel();
+			_scheduledAlertJob = undefined;
+		}
 
-/*			var toSchedule = new Date(
-				moment(_scheduledAlertDate, _dateformat).year(), 
-				moment(_scheduledAlertDate, _dateformat).month(), 
-				moment(_scheduledAlertDate, _dateformat).date(), 
-				moment(_scheduledAlertDate, _dateformat).hour(), 
-				moment(_scheduledAlertDate, _dateformat).minute(), 
-				moment(_scheduledAlertDate, _dateformat).seconds() + 1
-			);
-*/
-			_scheduledAlertJob = schedule.scheduleJob(_scheduledAlertDate, function() {
-				console.log("** (" + _self._getCurrentTime() + ") Running the scheduled job to alert for device " + _self.getAlertDeviceName());
-				_self._scheduledAlertJob = undefined;
-				_self._scheduledAlertDate = undefined;
+		if (typeof _scheduledWakeupJob !== 'undefined')
+		{
+			_scheduledWakeupJob.cancel();
+			_scheduledWakeupJob = undefined;
+		}
 
-				if (_self._isReadyforAlert())
+		_scheduledAlertDate = moment().add('m', addMinutes).format(_dateformat);
+
+		if (_self._hasWakeupMethods()) {
+			_scheduledWakeupDate = moment().format(_dateformat);
+
+			if (addMinutes > 1) {
+				_scheduledWakeupDate = moment().add('m', addMinutes - 1).format(_dateformat);
+			}
+
+			_scheduledWakeupJob = schedule.scheduleJob(_scheduledWakeupDate, function() {
+				console.log("** (" + _self._getCurrentTime() + ") Running the scheduled job to wakeup for device " + _self.getAlertDeviceName());
+				_self._scheduledWakeupJob = undefined;
+				_self._scheduledWakeupDate = undefined;
+
+				if (_self._hasWakeupMethods())
 				{
-					_self._alertDevice();
+					_self._wakeDevice();
 				}
 			});
 
-			console.log("** (" + this._getCurrentTime() + ") A job has been scheduled to announce " + this.getAlertDeviceName() + " at: " + _scheduledAlertDate);		
+			console.log("** (" + this._getCurrentTime() + ") A job has been scheduled to wake " + this.getAlertDeviceName() + " at: " + _scheduledWakeupDate);
+		}
+
+		_scheduledAlertJob = schedule.scheduleJob(_scheduledAlertDate, function() {
+			console.log("** (" + _self._getCurrentTime() + ") Running the scheduled job to alert for device " + _self.getAlertDeviceName());
+			_self._scheduledAlertJob = undefined;
+			_self._scheduledAlertDate = undefined;
+
+			if (_self._isReadyforAlert())
+			{
+				_self._alertDevice();
+			}
+		});
+
+		console.log("** (" + this._getCurrentTime() + ") A job has been scheduled to announce " + this.getAlertDeviceName() + " at: " + _scheduledAlertDate);
+	}
+
+	this._hasWakeupMethods = function () {
+		if (typeof(_wakeMethods) === 'undefined') return false;
+
+		return (_wakeMethods.length > 0);
+	}
+
+	this._wakeDevice = function () {
+		for (var method in _wakeMethods) {
+			console.log("** (" + this._getCurrentTime() + ") About to try to wake device " + this.getAlertDeviceName() + " using " + _wakeMethods[method].method + ":");
+			if (_wakeMethods[method].method == "pushover") {
+				var p = new push( {
+					user: _wakeMethods[method].user,
+					token: _wakeMethods[method].token,
+				});
+
+				var msg = {
+					message: 'omg node test',
+					title: "DeviceWatch.js wake",
+					device: _wakeMethods[method].device,
+					priority: _wakeMethods[method].priority
+				};
+
+				p.send( msg, function( err, result ) {
+					if ( err ) {
+						throw err;
+					}
+
+					console.log( result );
+				});
+			}
 		}
 	}
 
@@ -468,7 +539,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 				_scheduledIndigoRefreshIntervalID = setInterval(function() {
 					_self._refreshSyncState(alertMethod);
-		        }, _configuration.data.IndigoConfiguration.scanInterval * 1000 * 60);			
+				}, _configuration.data.IndigoConfiguration.scanInterval * 1000 * 60);			
 			}
 		}
 	}
