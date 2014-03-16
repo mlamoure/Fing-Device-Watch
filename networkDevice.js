@@ -565,6 +565,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		}
 
 		if (typeof this.getSyncState() === 'undefined') {
+			console.log("** (" + this._getCurrentTime() + ") No previous state is known about " + this.getAlertDeviceName() + ".  Going to schedule a alert in 1 minute.  Current state from fing is " + this.getDeviceState());
 			if (this.hasGetStateMechanism()) {
 				this._refreshSyncState(this._getRefreshSyncStateMechanism());
 				this._scheduleAlert(1);
@@ -572,7 +573,6 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				return false;
 			}
 
-			console.log("** (" + this._getCurrentTime() + ") No previous state is known about " + this.getAlertDeviceName() + ".  Going to schedule a alert in 1 minute.  Current state from fing is " + this.getDeviceState());
 			return true;
 		}
 
