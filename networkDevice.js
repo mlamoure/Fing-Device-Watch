@@ -513,12 +513,11 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 					priority: _wakeMethods[method].priority
 				};
 
-				p.send( msg, function( err, result ) {
+				p.send(msg, function( err, result ) {
 					if ( err ) {
 						throw err;
 					}
-
-					console.log( result );
+					console.log("** (" + this._getCurrentTime() + ") Pushover publication result: " + result);
 				});
 			}
 		}
