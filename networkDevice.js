@@ -130,8 +130,10 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				_scheduledAlertJob.cancel();
 				_scheduledAlertJob = undefined;
 			}
+
 			if (typeof _scheduledWakeupJob !== 'undefined')
 			{
+				console.log("** (" + this._getCurrentTime() + ") Cancelled the wakeup for device " + this.getAlertDeviceName());
 				_scheduledWakeupJob.cancel();
 				_scheduledWakeupJob	 = undefined;
 			}
@@ -505,8 +507,8 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				});
 
 				var msg = {
-					message: 'omg node test',
-					title: "DeviceWatch.js wake",
+					message: 'Wakeup Message',
+					title: "DeviceWatch.js wakeup message to refresh status on the home network",
 					device: _wakeMethods[method].device,
 					priority: _wakeMethods[method].priority
 				};
