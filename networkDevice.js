@@ -517,7 +517,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 					if ( err ) {
 						throw err;
 					}
-					console.log("** (" + this._getCurrentTime() + ") Pushover publication result: " + result);
+					console.log("** (" + _self._getCurrentTime() + ") Pushover publication result: " + result);
 				});
 			}
 		}
