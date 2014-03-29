@@ -30,9 +30,9 @@ Installation
 
 	For iOS, there is a tutorial here: http://oit2.utk.edu/helpdesk/kb/entry/2099/
 
-	6. Create a copy of deviceWatch.conf.sample and name it deviceWatch.conf.  Keep it in the same directory as deviceWatch.js.
+	6. Create a copy of configuration.sample and name it configuration.json.  Keep it in the same directory as deviceWatch.js.
 
-	7. Modify the new configuration file based on the instructions in the comments.
+	7. Modify the new configuration file based on the configuration documentation below.
 
 	8. Run manually via: sudo node deviceWatch.js
 	
@@ -44,11 +44,37 @@ Installation
 
 	9. Be sure to rotate the logs, or send the output to /dev/null.  The program is rather verbose, especially if you enable debugging via the configuration file.
 
-Supported Alert Methods
+Configuration File
 ---
-	1. "method": "indigo" - this will reach out to a Indigo server and sync the state with a variable on the server.  When Fing sees a device state change, it will tell indigo after a set amount of time.  You must set the "indigoVariableEndpoint" property for this method in the config.
 
-	2. "method": "sns" - A more generic notification method, allowing you to distribute the message of the device state change to a HTTP endpoint, email or other.  See Amazon's SNS FAQ for more information (http://aws.amazon.com/sns/faqs/).  You must set the "AWSTopicARN" property for this method in the config.
+AWS: Contains your default region, access key, and secret access key for Amazon SNS
+
+FakePublish: The Fakepublish flag is a good way to test the app without pushing to Amazon SNS.  The app isn’t very chatty anyway, so it’s unlikely to publish too many messages.  Devicewatch will also not publish any kind of alert method when fakepublish is on.
+
+FingConfiguration: The netmask to run fing.  Test it by running the fing wizard manually, you should see notifications of your network devices.
+
+IndigoConfiguration: scanInterval (in minutes), password protection information for Indigo.  Note, your Indigo server IP will be configured on the alert devices later.  The scanInterval determines how frequently DeviceWatch will check Indigo to ensure the device state is sync'd if you have alert devices that use the indigo alert method.  You can skip IndigoConfiguration if you don’t have Indigo.
+
+EmailConfiguration: Configuration for email notfication of non-white listed devices
+
+Debug: is more verbose when set to true.  Note: Devicewatch.js is very verbose to console, so recommend pushing to null or log file to audit ocassionally.
+
+UnknownDeviceNotification: mehtods to notify of unknown devices on your network.  Supported method is email.
+
+AlertDevices: List of devices that Devicewatch.js will alert when network status change.  Alert devices are automatically white listed, no need to add them twice.  Devices are not reported "off" until the ttl (in minutes) of the AlertDevice has expired.  This gives a bit of time for the device to come back online if it lost it's IP address.
+
+AlertDevices / AlertMethod: 
+
+	1. "method": "indigo" - this will reach out to a Indigo server and sync (two way) the state with a variable on the server.  Requires IndigoConfiguration to be set.  When Fing sees a device state change, it will tell indigo after a set amount of time.  You must set the "indigoEndpoint" property for this method in the config.  Devices are not reported "off" until the ttl of the AlertDevice has expired.
+
+	2. "method": "sns" - A more generic notification method, allowing you to distribute the message of the device state change to a HTTP endpoint, email or other.  See Amazon's SNS FAQ for more information (http://aws.amazon.com/sns/faqs/).  You must set the "AWSTopicARN" property for this method in the config.  Devices are not reported "off" until the ttl of the AlertDevice has expired.
+
+
+AlertDevices / WakeMethods: Pushover is supported to wake the device.  Optional and can be removed.  This is still in beta if it actually improves accuracy.
+
+WhiteListDevices: List of known devices on your network.  No need to double add any AlertDevice, they are automatically whitelisted.
+
+
 
 Change Log
 ---

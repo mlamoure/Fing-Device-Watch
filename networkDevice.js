@@ -614,7 +614,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return;
 		}
 
-		needle.get(alertMethod.indigoVariableEndpoint + ".txt", function(err, resp, body) {
+		needle.get(alertMethod.indigoEndpoint + ".txt", function(err, resp, body) {
 			csv()
 			.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
 			.to.array( function(data, count) {
@@ -668,13 +668,13 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 
 				if (_configuration.data.IndigoConfiguration.passwordProtect)
 				{
-					needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, { username: _configuration.data.IndigoConfiguration.username, password: _configuration.data.IndigoConfiguration.password, auth: 'digest' }, function() {
+					needle.put(_alertMethods[recordNum].indigoEndpoint, setValue, { username: _configuration.data.IndigoConfiguration.username, password: _configuration.data.IndigoConfiguration.password, auth: 'digest' }, function() {
 						//
 					})
 				}
 				else
 				{
-					needle.put(_alertMethods[recordNum].indigoVariableEndpoint, setValue, function() {
+					needle.put(_alertMethods[recordNum].indigoEndpoint, setValue, function() {
 						//
 					})
 				}

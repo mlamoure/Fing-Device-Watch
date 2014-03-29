@@ -7,8 +7,6 @@
 
 	"FakePublish": false,
 
-	"AWSTopicARN": "",
-
 	"FingConfiguration" : 
 	{
 		"netmask": "192.168.1.1/24"
@@ -46,7 +44,7 @@
 			"alertMethods": [
 				{
 					"method": "indigo",
-					"indigoVariableEndpoint": "http://ip:port/variables/variable"
+					"indigoEndpoint": "http://ip:port/variables/variable"
 				},
 				{
 					"method": "sns",
