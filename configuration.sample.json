@@ -68,7 +68,7 @@
 			"alertMethods": [
 				{
 					"method": "indigo",
-					"indigoVariableEndpoint": "http://ip:port/variables/variable"
+					"indigoEndpoint": "http://ip:port/variables/variable"
 				},
 				{
 					"method": "sns",

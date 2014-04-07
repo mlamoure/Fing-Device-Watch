@@ -614,22 +614,32 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 			return;
 		}
 
-		needle.get(alertMethod.indigoEndpoint + ".txt", function(err, resp, body) {
-			csv()
-			.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
-			.to.array( function(data, count) {
-				console.log("** (" + _self._getCurrentTime() + ") Raw HTTP request results from Indigo: \n" + body);
-				newIndigoValue = data[5][1] == "true";
-				
-				console.log("** (" + _self._getCurrentTime() + ") Obtained and saved the current value of indigo variable for " + _self.getAlertDeviceName() + " is: " + newIndigoValue);
-				
-				_syncState = newIndigoValue;
-				_syncStateTimestamp = _self._getCurrentTime();
-			})
-			.on('error', function(error){
-				console.log("** (" + _self._getCurrentTime() + ") Error getting results from Indigo: " + error.message);
-			});				
-		});		
+		if (_configuration.data.IndigoConfiguration.passwordProtect)
+		{
+			needle.get(alertMethod.indigoEndpoint + ".txt", { username: _configuration.data.IndigoConfiguration.username, password: _configuration.data.IndigoConfiguration.password, auth: 'digest' }, this._handleIndigoRefreshResponse);		
+		}
+		else
+		{
+			needle.get(alertMethod.indigoEndpoint + ".txt", this._handleIndigoRefreshResponse);		
+		}
+
+	}
+
+	this._handleIndigoRefreshResponse = function(err, resp, body) {
+		csv()
+		.from(body, { delimiter: ':', ltrim: 'true', rtrim: 'true' })
+		.to.array( function(data, count) {
+			console.log("** (" + _self._getCurrentTime() + ") Raw HTTP request results from Indigo: \n" + body);
+			newIndigoValue = data[5][1] == "true";
+			
+			console.log("** (" + _self._getCurrentTime() + ") Obtained and saved the current value of indigo variable for " + _self.getAlertDeviceName() + " is: " + newIndigoValue);
+			
+			_syncState = newIndigoValue;
+			_syncStateTimestamp = _self._getCurrentTime();
+		})
+		.on('error', function(error){
+			console.log("** (" + _self._getCurrentTime() + ") Error getting results from Indigo: " + error.message);
+		});				
 	}
 
 	this._alertDevice = function() {
