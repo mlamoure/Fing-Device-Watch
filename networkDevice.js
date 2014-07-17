@@ -413,6 +413,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 					token: _configuration.data.UnknownDeviceNotification[recordNum].token,
 				});
 
+
 				var msg = {
 					message: 'Unknown Device on Network',
 					title: "DeviceWatch.js wakeup message to refresh status on the home network",
