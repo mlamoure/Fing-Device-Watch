@@ -45,7 +45,7 @@
 			"method": "pushover",
 			"user": "USER KEY",
 			"token": "APP TOKEN",
-			"device": "iphone",
+			"device": "all",
 			"priority": 1
 		}
 	],

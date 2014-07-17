@@ -392,7 +392,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 					from: _configuration.data.GlobalEmailConfiguration.emailFrom, // sender address
 					to: _configuration.data.UnknownDeviceNotification[recordNum].emailTo, // list of receivers
 					subject: "Network Device Alert", // Subject line
-					text: emailBody, // plaintext body
+					text: alertText, // plaintext body
 				}
 
 				// send mail with defined transport object
@@ -413,11 +413,9 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 					token: _configuration.data.UnknownDeviceNotification[recordNum].token,
 				});
 
-
-
 				var msg = {
-					message: 'Unknown Device on Network',
-					title: "DeviceWatch.js wakeup message to refresh status on the home network",
+					message: alertText,
+					title: "Unknown Device on Network",
 					device: _configuration.data.UnknownDeviceNotification[recordNum].device,
 					priority: 1
 				};
