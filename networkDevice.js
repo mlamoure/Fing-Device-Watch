@@ -414,6 +414,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 				});
 
 
+
 				var msg = {
 					message: 'Unknown Device on Network',
 					title: "DeviceWatch.js wakeup message to refresh status on the home network",
