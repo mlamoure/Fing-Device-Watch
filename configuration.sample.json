@@ -20,9 +20,16 @@
 		"password": "password"
 	},
 
-	"EmailConfiguration" : {
-		"SMTP_Server": "server",
-		"EmailFrom": "user@host"
+	"GlobalEmailConfiguration" : {
+		"host": "smtp-server.net",
+		"secureConnection": true,
+		"port": 465,
+		"auth": 
+			{
+				"user": "gmail.user@gmail.com",
+				"pass": "userpass"
+			},
+		"emailFrom": "pi@myaddress"
 	},
 
 	"NonWhiteListedDeviceWarnInterval": 24,
@@ -31,8 +38,15 @@
 
 	"UnknownDeviceNotification" : [
 		{
-			"mode": "email",
-			"address:": "email@host"
+			"method": "email",
+			"emailTo:": "email@host"
+		},
+		{
+			"method": "pushover",
+			"user": "USER KEY",
+			"token": "APP TOKEN",
+			"device": "iphone",
+			"priority": 1
 		}
 	],
 
