@@ -370,7 +370,7 @@ function NetworkDevice(mac, ip, fqdn, manufacturer) {
 		// if it was already reported, let's quit
 		if (_unknownDeviceReported) return;
 
-		var alertText = "ALERT ** Found a device that is not cleared to be on the network: " + mac + " FQDN: " + fqdn;
+		var alertText = "ALERT ** Found a device that is not cleared to be on the network: " + this.getMACAddress() + " FQDN: " + this.getFQDN() + " IP: " + this.getIPAddress();
 
 		console.log("** (" + this._getCurrentTime() + ") " + alertText);
 
